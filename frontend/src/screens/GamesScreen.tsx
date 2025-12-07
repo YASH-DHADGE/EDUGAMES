@@ -81,6 +81,33 @@ const GamesScreen = ({ navigation }: any) => {
             gradient: ['#673AB7', '#9575CD'],
             route: 'ForcePlayGame',
         },
+        {
+            id: 9,
+            title: 'Cell Command',
+            description: 'Build a cell part by part',
+            icon: 'dna',
+            color: '#9C27B0',
+            gradient: ['#9C27B0', '#E1BEE7'],
+            route: 'CellCommand',
+        },
+        {
+            id: 12,
+            title: 'Digestive Dash',
+            description: 'Match enzymes to nutrients',
+            icon: 'stomach',
+            color: '#E91E63',
+            gradient: ['#EC407A', '#F8BBD0'],
+            route: 'DigestiveDash',
+        },
+        {
+            id: 13,
+            title: 'Genetics Lab',
+            description: 'Solve the Punnett Square',
+            icon: 'flask',
+            color: '#4CAF50',
+            gradient: ['#66BB6A', '#C8E6C9'],
+            route: 'GeneticsLab',
+        },
     ];
 
     const numColumns = getGridColumns();

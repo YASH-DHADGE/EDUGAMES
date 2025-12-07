@@ -104,15 +104,21 @@ const submitQuizResult = async (req, res) => {
 
         // Find the assignment
         let assignment;
+        console.log('DEBUG: Student assignments count:', student.assignments.length);
+        console.log('DEBUG: Available Assignment IDs:', student.assignments.map(a => a._id.toString()));
+
         if (assignmentId) {
             assignment = student.assignments.id(assignmentId);
+            console.log('DEBUG: Looked for assignmentId:', assignmentId, 'Found:', !!assignment);
         }
 
         // Fallback or validation
         if (!assignment && quizId) {
+            console.log('DEBUG: Fallback search by quizId:', quizId);
             assignment = student.assignments.find(
                 a => a.quizId && a.quizId.toString() === quizId && a.status === 'pending'
             );
+            console.log('DEBUG: Fallback Found:', !!assignment);
         }
 
         if (assignment) {
@@ -132,8 +138,67 @@ const submitQuizResult = async (req, res) => {
     }
 };
 
+// @desc    Get all classroom content (chapters & quizzes) for the student's class
+// @route   GET /api/student/classroom
+// @access  Private/Student
+const getClassroomContent = async (req, res) => {
+    try {
+        const student = await User.findById(req.user._id);
+        if (!student || !student.selectedClass) {
+            return res.status(400).json({ message: 'Student class not found' });
+        }
+
+        const classNumber = String(student.selectedClass);
+        const TeacherChapter = require('../models/TeacherChapter');
+        const TeacherQuiz = require('../models/TeacherQuiz');
+
+        const chapters = await TeacherChapter.find({ classNumber })
+            .select('title subject content createdAt teacherId')
+            .populate('teacherId', 'name');
+
+        const quizzes = await TeacherQuiz.find({ classNumber })
+            .select('title subject description questions createdAt teacherId')
+            .populate('teacherId', 'name');
+
+        // Combine and format
+        const content = [
+            ...chapters.map(c => ({
+                id: c._id,
+                type: 'chapter',
+                title: c.title,
+                subtitle: c.subject, // Map subject to subtitle
+                description: c.content ? c.content.substring(0, 100) + '...' : '', // Preview
+                fullContent: c.content,
+                teacher: c.teacherId ? c.teacherId.name : 'Unknown',
+                date: c.createdAt,
+                icon: 'book-open-page-variant'
+            })),
+            ...quizzes.map(q => ({
+                id: q._id,
+                type: 'quiz',
+                title: q.title,
+                subtitle: q.subject,
+                description: q.description || `${q.questions.length} Questions`,
+                teacher: q.teacherId ? q.teacherId.name : 'Unknown',
+                date: q.createdAt,
+                icon: 'format-list-checks',
+                questions: q.questions // Include questions for rendering/navigating
+            }))
+        ];
+
+        // Sort by date descending
+        content.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        res.json(content);
+    } catch (error) {
+        console.error('Error fetching classroom content:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     getStudentTasks,
     getQuizById,
-    submitQuizResult
+    submitQuizResult,
+    getClassroomContent
 };

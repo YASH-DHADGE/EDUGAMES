@@ -31,6 +31,7 @@ class ClassService {
     // Save class selection locally and sync to backend
     async selectClass(classId: ClassLevel, token?: string): Promise<void> {
         try {
+            if (!classId) return;
             console.log('[ClassService] Selecting class:', classId);
 
             // Save locally
@@ -76,6 +77,10 @@ class ClassService {
 
         if (isOnline) {
             try {
+                if (!classId) {
+                    console.log('[ClassService] Cannot sync: Class ID is missing');
+                    return;
+                }
                 console.log('[ClassService] Syncing class to backend');
                 await api.post('/user/select-class',
                     { classId },
@@ -133,6 +138,11 @@ class ClassService {
             const data = await AsyncStorage.getItem(CLASS_STORAGE_KEY);
             if (data) {
                 const selection: ClassSelection = JSON.parse(data);
+                if (!selection.classId) {
+                    // Clean up bad data
+                    await AsyncStorage.removeItem(CLASS_STORAGE_KEY);
+                    return;
+                }
                 if (!selection.synced && token) {
                     console.log('[ClassService] Retrying class sync');
                     await this.syncClassToBackend(selection.classId, token);

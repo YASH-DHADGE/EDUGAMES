@@ -7,15 +7,19 @@ import GradientBackground from '../components/ui/GradientBackground';
 import CustomCard from '../components/ui/CustomCard';
 import { useAuth } from '../context/AuthContext';
 import { useSync } from '../context/SyncContext';
+import { useAppTheme } from '../context/ThemeContext';
 import api from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { theme, gradients, spacing, borderRadius, shadows } from '../theme';
+import { gradients, spacing, borderRadius, shadows } from '../theme';
+import { useTranslation } from '../i18n';
 
 const TASKS_CACHE_KEY = 'student_tasks_cache';
 
 const StudentTasksScreen = () => {
     const navigation = useNavigation();
     const { user } = useAuth();
+    const { t } = useTranslation();
+    const { theme } = useAppTheme();
     const { isOffline } = useSync();
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -94,18 +98,18 @@ const StudentTasksScreen = () => {
         }
 
         return (
-            <CustomCard key={index} style={styles.taskCard}>
+            <CustomCard key={index} style={[styles.taskCard, { backgroundColor: theme.colors.surface }]}>
                 <View style={styles.taskHeader}>
                     <View style={[styles.taskIcon, { backgroundColor: theme.colors.primaryContainer }]}>
                         <Ionicons name={typeIcon as any} size={24} color={theme.colors.primary} />
                     </View>
                     <View style={styles.taskInfo}>
-                        <Text style={styles.taskTitle}>{typeLabel}: {title}</Text>
-                        <Text style={styles.taskDate}>Assigned: {new Date(task.assignedAt).toLocaleDateString()}</Text>
+                        <Text style={[styles.taskTitle, { color: theme.colors.onSurface }]}>{typeLabel}: {title}</Text>
+                        <Text style={[styles.taskDate, { color: theme.colors.textSecondary }]}>Assigned: {new Date(task.assignedAt).toLocaleDateString()}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) + '20' }]}>
                         <Text style={[styles.statusText, { color: getStatusColor(task.status) }]}>
-                            {task.status.toUpperCase()}
+                            {t(`tasks.${task.status}`).toUpperCase()}
                         </Text>
                     </View>
                 </View>
@@ -166,13 +170,14 @@ const StudentTasksScreen = () => {
                             style={styles.actionButton}
                         >
                             <Text style={styles.actionButtonText}>
-                                {task.type === 'quiz' ? 'Start Quiz' : 'Start Learning'}
+                                {task.type === 'quiz' ? `${t('tasks.start')} ${t('home.quiz')}` : `${t('tasks.start')} ${t('home.lessons')}`}
                             </Text>
                             <Ionicons name="arrow-forward" size={16} color="#fff" />
                         </LinearGradient>
                     </TouchableOpacity>
-                )}
-            </CustomCard>
+                )
+                }
+            </CustomCard >
         );
     };
 
@@ -180,7 +185,7 @@ const StudentTasksScreen = () => {
         <GradientBackground>
             <View style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>My Tasks</Text>
+                    <Text style={styles.title}>{t('tasks.title')}</Text>
                     {isOffline && (
                         <View style={styles.offlineBadge}>
                             <Ionicons name="cloud-offline" size={16} color="#fff" />
@@ -203,7 +208,7 @@ const StudentTasksScreen = () => {
                         ) : (
                             <View style={styles.emptyState}>
                                 <Ionicons name="checkmark-circle-outline" size={60} color="rgba(255,255,255,0.5)" />
-                                <Text style={styles.emptyText}>No pending tasks!</Text>
+                                <Text style={styles.emptyText}>{t('tasks.noTasks')}</Text>
                                 <Text style={styles.emptySubtext}>Great job staying on top of your work.</Text>
                             </View>
                         )}
@@ -272,12 +277,10 @@ const styles = StyleSheet.create({
     taskTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: theme.colors.onSurface,
         marginBottom: 2,
     },
     taskDate: {
         fontSize: 12,
-        color: theme.colors.textSecondary,
     },
     statusBadge: {
         paddingHorizontal: spacing.sm,

@@ -9,6 +9,7 @@ type ThemeType = 'light' | 'dark' | 'system';
 interface ThemeContextType {
     themeType: ThemeType;
     isDark: boolean;
+    theme: any; // Exposing the active theme object
     setThemeType: (type: ThemeType) => Promise<void>;
     toggleTheme: () => Promise<void>;
 }
@@ -60,7 +61,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const activeTheme = isDark ? darkTheme : theme;
 
     return (
-        <ThemeContext.Provider value={{ themeType, isDark, setThemeType, toggleTheme }}>
+        <ThemeContext.Provider value={{ themeType, isDark, theme: activeTheme, setThemeType, toggleTheme }}>
             <PaperProvider theme={activeTheme}>
                 {children}
             </PaperProvider>

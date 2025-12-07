@@ -4,7 +4,7 @@ import { Text, Button, useTheme, IconButton, Surface } from 'react-native-paper'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import LottieView from 'lottie-react-native';
 import { submitQuizResult } from '../services/quizzesService';
-import { useNetInfo } from '@react-native-community/netinfo';
+import { useSync } from '../context/SyncContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { LinearGradient } from 'expo-linear-gradient';
 import { soundManager } from '../utils/soundEffects';
@@ -13,7 +13,7 @@ import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 const QuizResult = ({ route, navigation }: any) => {
     const theme = useTheme();
-    const netInfo = useNetInfo();
+    const { isOffline } = useSync();
     const { containerStyle, isMobile } = useResponsive();
     const { score, totalQuestions, correctAnswers, quizId, questions, userAnswers, assignmentId } = route.params;
     const [showReview, setShowReview] = React.useState(false);
@@ -32,7 +32,7 @@ const QuizResult = ({ route, navigation }: any) => {
                     timestamp: Date.now(),
                 };
                 console.log('Submitting Result with AssignmentID:', assignmentId);
-                await submitQuizResult(result, netInfo.isConnected || false);
+                await submitQuizResult(result, !isOffline);
                 console.log('Result submitted successfully');
             } catch (err) {
                 console.error('Error submitting result:', err);

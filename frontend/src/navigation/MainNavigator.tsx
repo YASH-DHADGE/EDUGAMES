@@ -22,6 +22,9 @@ import ChemistryBalanceGame from '../screens/games/ChemistryBalanceGame';
 import ForcePlayGame from '../screens/games/ForcePlayGame';
 import LabelOrganGame from '../screens/games/LabelOrganGame';
 import CellStructureQuiz from '../screens/games/CellStructureQuiz';
+import CellCommandScreen from '../screens/games/CellCommandScreen';
+import DigestiveDashScreen from '../screens/games/DigestiveDashScreen';
+import GeneticsLabScreen from '../screens/games/GeneticsLabScreen';
 
 // Import other screens
 import SettingsScreenNew from '../screens/SettingsScreenNew';
@@ -71,6 +74,9 @@ const MainNavigator = () => {
             <Stack.Screen name="ChemistryBalanceGame" component={ChemistryBalanceGame} />
             <Stack.Screen name="CellStructureQuiz" component={CellStructureQuiz} />
             <Stack.Screen name="ForcePlayGame" component={ForcePlayGame} />
+            <Stack.Screen name="CellCommand" component={CellCommandScreen} />
+            <Stack.Screen name="DigestiveDash" component={DigestiveDashScreen} />
+            <Stack.Screen name="GeneticsLab" component={GeneticsLabScreen} />
 
             {/* Other Screens */}
             <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />

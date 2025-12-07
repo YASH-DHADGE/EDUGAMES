@@ -50,6 +50,8 @@ export const translations = {
             rewards: 'Rewards',
             science: 'Science',
             sync: 'Sync',
+            classroom: 'Classroom',
+            leaderboard: 'Leaderboard',
         },
         // Profile
         profile: {
@@ -70,6 +72,38 @@ export const translations = {
             profileUpdated: 'Profile updated successfully!',
             error: 'Error',
             updateFailed: 'Failed to update profile',
+        },
+        // Classroom
+        classroom: {
+            title: 'My Classroom',
+            liveNow: 'LIVE NOW',
+            joinClass: 'Join Class',
+            myTeachers: 'My Teachers',
+            announcements: 'Announcements',
+            important: 'Important',
+        },
+        // Tasks
+        tasks: {
+            title: 'My Tasks',
+            pending: 'Pending',
+            completed: 'Completed',
+            noTasks: 'No tasks available',
+            start: 'Start',
+            due: 'Due',
+        },
+        // Leaderboard
+        leaderboard: {
+            title: 'Leaderboard',
+            global: 'Global',
+            weekly: 'Weekly',
+            rank: 'Rank',
+        },
+        // Games
+        games: {
+            title: 'Games',
+            memoryMatch: 'Memory Match',
+            oddOneOut: 'Odd One Out',
+            quickMath: 'Quick Math',
         },
         // Common
         common: {
@@ -132,6 +166,8 @@ export const translations = {
             rewards: 'पुरस्कार',
             science: 'विज्ञान',
             sync: 'सिंक',
+            classroom: 'कक्षा',
+            leaderboard: 'लीडरबोर्ड',
         },
         // Profile
         profile: {
@@ -152,6 +188,38 @@ export const translations = {
             profileUpdated: 'प्रोफ़ाइल सफलतापूर्वक अपडेट किया गया!',
             error: 'त्रुटि',
             updateFailed: 'प्रोफ़ाइल अपडेट करने में विफल',
+        },
+        // Classroom
+        classroom: {
+            title: 'मेरी कक्षा',
+            liveNow: 'अभी लाइव',
+            joinClass: 'कक्षा में शामिल हों',
+            myTeachers: 'मेरे शिक्षक',
+            announcements: 'घोषणाएं',
+            important: 'महत्वपूर्ण',
+        },
+        // Tasks
+        tasks: {
+            title: 'मेरे कार्य',
+            pending: 'लंबित',
+            completed: 'पूरा हुआ',
+            noTasks: 'कोई कार्य उपलब्ध नहीं',
+            start: 'शुरू करें',
+            due: 'नियत',
+        },
+        // Leaderboard
+        leaderboard: {
+            title: 'लीडरबोर्ड',
+            global: 'वैश्विक',
+            weekly: 'साप्ताहिक',
+            rank: 'रैंक',
+        },
+        // Games
+        games: {
+            title: 'खेल',
+            memoryMatch: 'मेमोरी मैच',
+            oddOneOut: 'ऑड वन आउट',
+            quickMath: 'क्विक मैथ',
         },
         // Common
         common: {
@@ -214,6 +282,8 @@ export const translations = {
             rewards: 'ପୁରସ୍କାର',
             science: 'ବିଜ୍ଞାନ',
             sync: 'ସିଙ୍କ',
+            classroom: 'ଶ୍ରେଣୀ ଗୃହ',
+            leaderboard: 'ଲିଡରବୋର୍ଡ',
         },
         // Profile
         profile: {
@@ -235,6 +305,38 @@ export const translations = {
             error: 'ତ୍ରୁଟି',
             updateFailed: 'ପ୍ରୋଫାଇଲ୍ ଅପଡେଟ୍ କରିବାରେ ବିଫଳ',
         },
+        // Classroom
+        classroom: {
+            title: 'ମୋ ଶ୍ରେଣୀ ଗୃହ',
+            liveNow: 'ବର୍ତ୍ତମାନ ଲାଇଭ୍',
+            joinClass: 'କ୍ଲାସରେ ଯୋଗ ଦିଅନ୍ତୁ',
+            myTeachers: 'ମୋର ଶିକ୍ଷକମାନେ',
+            announcements: 'ଘୋଷଣା',
+            important: 'ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ',
+        },
+        // Tasks
+        tasks: {
+            title: 'ମୋ କାର୍ଯ୍ୟ',
+            pending: 'ବାକି ଅଛି',
+            completed: 'ସମ୍ପୂର୍ଣ୍ଣ ହୋଇଛି',
+            noTasks: 'କୌଣସି କାର୍ଯ୍ୟ ଉପଲବ୍ଧ ନାହିଁ',
+            start: 'ଆରମ୍ଭ କରନ୍ତୁ',
+            due: 'ଶେଷ ତାରିଖ',
+        },
+        // Leaderboard
+        leaderboard: {
+            title: 'ଲିଡରବୋର୍ଡ',
+            global: 'ବିଶ୍ୱସ୍ତରୀୟ',
+            weekly: 'ସାପ୍ତାହିକ',
+            rank: 'ମାନ୍ୟତା',
+        },
+        // Games
+        games: {
+            title: 'ଖେଳ',
+            memoryMatch: 'ମେମୋରୀ ମ୍ୟାଚ',
+            oddOneOut: 'ଅଡ୍ ୱାନ୍ ଆଉଟ୍',
+            quickMath: 'କ୍ୱିକ୍ ମ୍ୟାଥ୍',
+        },
         // Common
         common: {
             or: 'କିମ୍ବା',
@@ -250,3 +352,4 @@ export const translations = {
 
 export type Language = 'en' | 'hi' | 'od';
 export type TranslationKey = keyof typeof translations.en;
+// Verified translation structure

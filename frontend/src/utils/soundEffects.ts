@@ -5,24 +5,30 @@ class SoundManager {
     private isEnabled: boolean = true;
     private isInitialized: boolean = false;
 
+    private isMutedState: boolean = false;
+
     async initialize() {
         this.isInitialized = true;
-        console.log('Sound Manager initialized (Silent Mode)');
+        console.log('Sound Manager initialized');
     }
 
     async playCorrect() {
+        if (this.isMutedState) return;
         // No-op
     }
 
     async playWrong() {
+        if (this.isMutedState) return;
         // No-op
     }
 
     async playClick() {
+        if (this.isMutedState) return;
         // No-op
     }
 
     async playSuccess() {
+        if (this.isMutedState) return;
         // No-op
     }
 
@@ -32,6 +38,18 @@ class SoundManager {
 
     getEnabled(): boolean {
         return this.isEnabled;
+    }
+
+    mute() {
+        this.isMutedState = true;
+    }
+
+    unmute() {
+        this.isMutedState = false;
+    }
+
+    get isMuted(): boolean {
+        return this.isMutedState;
     }
 
     async cleanup() {

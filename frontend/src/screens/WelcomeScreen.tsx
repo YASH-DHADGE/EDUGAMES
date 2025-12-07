@@ -6,6 +6,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp, ZoomIn, Layout, SlideInDown } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
 import { theme, spacing, borderRadius, typography, shadows, gradients } from '../theme';
+import { useAppTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -248,6 +249,7 @@ const BackgroundBubbles = () => {
 
 const WelcomeScreen = ({ navigation }: any) => {
     const { login, register, loginAsGuest } = useAuth();
+    const { theme: activeTheme, isDark } = useAppTheme();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -325,8 +327,8 @@ const WelcomeScreen = ({ navigation }: any) => {
 
     if (showAuthModal) {
         return (
-            <View style={styles.loginContainer}>
-                <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+            <View style={[styles.loginContainer, { backgroundColor: activeTheme.colors.background }]}>
+                <StatusBar barStyle={isDark ? "light-content" : "light-content"} backgroundColor="transparent" translucent />
 
                 {/* Interactive Bubbles in Modal */}
                 {/* Moved to bottom for z-index */}
@@ -374,13 +376,13 @@ const WelcomeScreen = ({ navigation }: any) => {
                             entering={SlideInDown.duration(500)}
                             style={styles.formContainer}
                         >
-                            <Surface style={styles.formCard} elevation={3}>
+                            <Surface style={[styles.formCard, { backgroundColor: activeTheme.colors.surface }]} elevation={3}>
                                 {authMode === 'register' && (
                                     <>
                                         <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.inputGroup}>
-                                            <Text style={styles.inputLabel}>Full Name</Text>
-                                            <View style={styles.inputWrapper}>
-                                                <MaterialCommunityIcons name="account-outline" size={20} color={theme.colors.primary} style={styles.inputIcon} />
+                                            <Text style={[styles.inputLabel, { color: activeTheme.colors.textSecondary }]}>Full Name</Text>
+                                            <View style={[styles.inputWrapper, { backgroundColor: activeTheme.colors.surfaceVariant + '40', borderColor: activeTheme.colors.outline + '20' }]}>
+                                                <MaterialCommunityIcons name="account-outline" size={20} color={activeTheme.colors.primary} style={styles.inputIcon} />
                                                 <TextInput
                                                     mode="flat"
                                                     value={name}
@@ -389,31 +391,31 @@ const WelcomeScreen = ({ navigation }: any) => {
                                                     style={styles.input}
                                                     underlineColor="transparent"
                                                     activeUnderlineColor="transparent"
-                                                    textColor={theme.colors.onSurface}
-                                                    placeholderTextColor={theme.colors.textTertiary}
+                                                    textColor={activeTheme.colors.onSurface}
+                                                    placeholderTextColor={activeTheme.colors.textTertiary}
                                                 />
                                             </View>
                                         </Animated.View>
 
                                         {/* Role Selection */}
                                         <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.inputGroup}>
-                                            <Text style={styles.inputLabel}>I am a</Text>
+                                            <Text style={[styles.inputLabel, { color: activeTheme.colors.textSecondary }]}>I am a</Text>
                                             <Menu
                                                 visible={showRoleMenu}
                                                 onDismiss={() => setShowRoleMenu(false)}
                                                 anchor={
                                                     <TouchableOpacity
                                                         onPress={() => setShowRoleMenu(true)}
-                                                        style={styles.inputWrapper}
+                                                        style={[styles.inputWrapper, { backgroundColor: activeTheme.colors.surfaceVariant + '40', borderColor: activeTheme.colors.outline + '20' }]}
                                                     >
-                                                        <MaterialCommunityIcons name="account-tie-outline" size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                                                        <Text style={[styles.inputText, { color: theme.colors.onSurface }]}>
+                                                        <MaterialCommunityIcons name="account-tie-outline" size={20} color={activeTheme.colors.primary} style={styles.inputIcon} />
+                                                        <Text style={[styles.inputText, { color: activeTheme.colors.onSurface }]}>
                                                             {role.charAt(0).toUpperCase() + role.slice(1)}
                                                         </Text>
-                                                        <MaterialCommunityIcons name="chevron-down" size={20} color={theme.colors.outline} style={{ marginRight: spacing.md }} />
+                                                        <MaterialCommunityIcons name="chevron-down" size={20} color={activeTheme.colors.outline} style={{ marginRight: spacing.md }} />
                                                     </TouchableOpacity>
                                                 }
-                                                contentStyle={{ backgroundColor: '#fff', borderRadius: borderRadius.lg }}
+                                                contentStyle={{ backgroundColor: activeTheme.colors.surface, borderRadius: borderRadius.lg }}
                                             >
                                                 {['student', 'teacher', 'institute', 'admin'].map((r) => (
                                                     <Menu.Item
@@ -423,6 +425,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                                                             setShowRoleMenu(false);
                                                         }}
                                                         title={r.charAt(0).toUpperCase() + r.slice(1)}
+                                                        titleStyle={{ color: activeTheme.colors.onSurface }}
                                                     />
                                                 ))}
                                             </Menu>
@@ -431,23 +434,23 @@ const WelcomeScreen = ({ navigation }: any) => {
                                         {/* Class Selection - Only for Students */}
                                         {role === 'student' && (
                                             <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.inputGroup}>
-                                                <Text style={styles.inputLabel}>Class</Text>
+                                                <Text style={[styles.inputLabel, { color: activeTheme.colors.textSecondary }]}>Class</Text>
                                                 <Menu
                                                     visible={showClassMenu}
                                                     onDismiss={() => setShowClassMenu(false)}
                                                     anchor={
                                                         <TouchableOpacity
                                                             onPress={() => setShowClassMenu(true)}
-                                                            style={styles.inputWrapper}
+                                                            style={[styles.inputWrapper, { backgroundColor: activeTheme.colors.surfaceVariant + '40', borderColor: activeTheme.colors.outline + '20' }]}
                                                         >
-                                                            <MaterialCommunityIcons name="school-outline" size={20} color={theme.colors.primary} style={styles.inputIcon} />
-                                                            <Text style={[styles.inputText, { color: selectedClass ? theme.colors.onSurface : theme.colors.textSecondary }]}>
+                                                            <MaterialCommunityIcons name="school-outline" size={20} color={activeTheme.colors.primary} style={styles.inputIcon} />
+                                                            <Text style={[styles.inputText, { color: selectedClass ? activeTheme.colors.onSurface : activeTheme.colors.textSecondary }]}>
                                                                 {selectedClass ? `Class ${selectedClass}` : 'Select Class'}
                                                             </Text>
-                                                            <MaterialCommunityIcons name="chevron-down" size={20} color={theme.colors.outline} style={{ marginRight: spacing.md }} />
+                                                            <MaterialCommunityIcons name="chevron-down" size={20} color={activeTheme.colors.outline} style={{ marginRight: spacing.md }} />
                                                         </TouchableOpacity>
                                                     }
-                                                    contentStyle={{ backgroundColor: '#fff', maxHeight: 300, borderRadius: borderRadius.lg }}
+                                                    contentStyle={{ backgroundColor: activeTheme.colors.surface, maxHeight: 300, borderRadius: borderRadius.lg }}
                                                 >
                                                     {[6, 7, 8, 9, 10].map((c) => (
                                                         <Menu.Item
@@ -457,6 +460,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                                                                 setShowClassMenu(false);
                                                             }}
                                                             title={`Class ${c}`}
+                                                            titleStyle={{ color: activeTheme.colors.onSurface }}
                                                         />
                                                     ))}
                                                 </Menu>
@@ -466,9 +470,9 @@ const WelcomeScreen = ({ navigation }: any) => {
                                 )}
 
                                 <Animated.View entering={FadeInDown.delay(authMode === 'register' ? 400 : 100).duration(400)} style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Email</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <MaterialCommunityIcons name="email-outline" size={20} color={theme.colors.primary} style={styles.inputIcon} />
+                                    <Text style={[styles.inputLabel, { color: activeTheme.colors.textSecondary }]}>Email</Text>
+                                    <View style={[styles.inputWrapper, { backgroundColor: activeTheme.colors.surfaceVariant + '40', borderColor: activeTheme.colors.outline + '20' }]}>
+                                        <MaterialCommunityIcons name="email-outline" size={20} color={activeTheme.colors.primary} style={styles.inputIcon} />
                                         <TextInput
                                             mode="flat"
                                             value={email}
@@ -479,16 +483,16 @@ const WelcomeScreen = ({ navigation }: any) => {
                                             style={styles.input}
                                             underlineColor="transparent"
                                             activeUnderlineColor="transparent"
-                                            textColor={theme.colors.onSurface}
-                                            placeholderTextColor={theme.colors.textTertiary}
+                                            textColor={activeTheme.colors.onSurface}
+                                            placeholderTextColor={activeTheme.colors.textTertiary}
                                         />
                                     </View>
                                 </Animated.View>
 
                                 <Animated.View entering={FadeInDown.delay(authMode === 'register' ? 500 : 200).duration(400)} style={styles.inputGroup}>
-                                    <Text style={styles.inputLabel}>Password</Text>
-                                    <View style={styles.inputWrapper}>
-                                        <MaterialCommunityIcons name="lock-outline" size={20} color={theme.colors.primary} style={styles.inputIcon} />
+                                    <Text style={[styles.inputLabel, { color: activeTheme.colors.textSecondary }]}>Password</Text>
+                                    <View style={[styles.inputWrapper, { backgroundColor: activeTheme.colors.surfaceVariant + '40', borderColor: activeTheme.colors.outline + '20' }]}>
+                                        <MaterialCommunityIcons name="lock-outline" size={20} color={activeTheme.colors.primary} style={styles.inputIcon} />
                                         <TextInput
                                             mode="flat"
                                             value={password}
@@ -498,15 +502,15 @@ const WelcomeScreen = ({ navigation }: any) => {
                                             style={styles.input}
                                             underlineColor="transparent"
                                             activeUnderlineColor="transparent"
-                                            textColor={theme.colors.onSurface}
-                                            placeholderTextColor={theme.colors.textTertiary}
+                                            textColor={activeTheme.colors.onSurface}
+                                            placeholderTextColor={activeTheme.colors.textTertiary}
                                         />
                                         <TouchableOpacity
                                             onPress={() => setShowPassword(!showPassword)}
                                             style={styles.eyeIcon}
                                             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                                         >
-                                            <MaterialCommunityIcons name={showPassword ? "eye-off" : "eye"} size={20} color={theme.colors.outline} />
+                                            <MaterialCommunityIcons name={showPassword ? "eye-off" : "eye"} size={20} color={activeTheme.colors.outline} />
                                         </TouchableOpacity>
                                     </View>
                                 </Animated.View>
@@ -547,12 +551,12 @@ const WelcomeScreen = ({ navigation }: any) => {
                                     </TouchableOpacity>
                                 )}
 
-                                <View style={styles.signupLinkContainer}>
-                                    <Text style={styles.signupText}>
+                                <View style={[styles.signupLinkContainer, { borderTopColor: activeTheme.colors.outline + '20' }]}>
+                                    <Text style={[styles.signupText, { color: activeTheme.colors.textSecondary }]}>
                                         {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
                                     </Text>
                                     <TouchableOpacity onPress={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}>
-                                        <Text style={styles.signupLink}>
+                                        <Text style={[styles.signupLink, { color: activeTheme.colors.primary }]}>
                                             {authMode === 'login' ? 'Sign Up' : 'Sign In'}
                                         </Text>
                                     </TouchableOpacity>
@@ -569,8 +573,8 @@ const WelcomeScreen = ({ navigation }: any) => {
     }
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <View style={[styles.container, { backgroundColor: activeTheme.colors.background }]}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
 
             {/* Animated Bubbles Background */}
             {/* Moved to bottom for z-index */}
@@ -597,7 +601,7 @@ const WelcomeScreen = ({ navigation }: any) => {
                             entering={ZoomIn.delay(200).duration(600)}
                             style={styles.heroIconContainer}
                         >
-                            <Surface style={styles.heroIconCard} elevation={4}>
+                            <Surface style={[styles.heroIconCard, { backgroundColor: activeTheme.colors.surface }]} elevation={4}>
                                 <LinearGradient
                                     colors={gradients.primary}
                                     style={styles.heroIconGradient}
@@ -608,8 +612,8 @@ const WelcomeScreen = ({ navigation }: any) => {
                         </Animated.View>
 
                         <Animated.View entering={FadeInUp.delay(400).duration(600)} style={styles.textContainer}>
-                            <Text style={styles.heading}>{slide.title}</Text>
-                            <Text style={styles.subtitle}>{slide.description}</Text>
+                            <Text style={[styles.heading, { color: activeTheme.colors.onBackground }]}>{slide.title}</Text>
+                            <Text style={[styles.subtitle, { color: activeTheme.colors.textSecondary }]}>{slide.description}</Text>
                         </Animated.View>
                     </View>
                 ))}
@@ -618,14 +622,15 @@ const WelcomeScreen = ({ navigation }: any) => {
             {/* Animated Bubbles Background - Rendered after ScrollView to be interactive */}
             <BackgroundBubbles />
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { backgroundColor: activeTheme.colors.background }]}>
                 <View style={styles.pagination}>
                     {SLIDES.map((_, index) => (
                         <Animated.View
                             key={index}
                             style={[
                                 styles.dot,
-                                currentSlide === index && styles.dotActive
+                                { backgroundColor: activeTheme.colors.outline + '40' },
+                                currentSlide === index && { width: 32, backgroundColor: activeTheme.colors.primary }
                             ]}
                             layout={Layout.springify()}
                         />

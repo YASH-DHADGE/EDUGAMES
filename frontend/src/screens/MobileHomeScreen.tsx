@@ -17,6 +17,7 @@ import OnboardingTutorial from '../components/OnboardingTutorial';
 import StreakCelebration from '../components/StreakCelebration';
 import ConfettiAnimation from '../components/ConfettiAnimation';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import { useAppTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -121,7 +122,7 @@ const MobileHomeScreen = ({ navigation }: any) => {
         },
         {
             id: '8',
-            title: 'Classroom',
+            title: t('home.classroom'),
             icon: 'school',
             gradient: ['#26A69A', '#80CBC4'],
             onPress: () => navigation.navigate('Classroom'),
@@ -155,6 +156,7 @@ const MobileHomeScreen = ({ navigation }: any) => {
                             <Text style={styles.nameText}>{user?.name || 'Student'}</Text>
                         </View>
                         <View style={styles.headerActions}>
+                            <LanguageToggle />
                             <ThemeToggle />
                             <View style={styles.streakBadge}>
                                 <MaterialCommunityIcons name="fire" size={16} color="#FFD700" />

@@ -12,7 +12,18 @@ router.post('/select-class', protect, async (req, res) => {
         console.log('[UserRoutes] Selecting class:', { userId, classId });
 
         // Validate classId
-        const classNumber = parseInt(classId.replace('class-', ''));
+        // Validate classId
+        if (!classId) {
+            return res.status(400).json({ message: 'Class ID is required' });
+        }
+
+        let classNumber;
+        if (typeof classId === 'string') {
+            classNumber = parseInt(classId.replace('class-', ''));
+        } else {
+            classNumber = parseInt(classId);
+        }
+
         if (isNaN(classNumber) || classNumber < 6 || classNumber > 12) {
             return res.status(400).json({
                 message: 'Invalid class selection. Must be between 6 and 12.'

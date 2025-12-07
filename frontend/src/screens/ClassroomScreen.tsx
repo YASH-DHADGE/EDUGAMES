@@ -6,21 +6,53 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { theme, gradients, spacing, borderRadius } from '../theme';
+import { useTranslation } from '../i18n';
+import { fetchClassroomContent, ClassroomItem } from '../services/studentService';
+import { ActivityIndicator, Modal, ScrollView as NativeScrollView } from 'react-native';
 
 const ClassroomScreen = () => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
     const [activeTab, setActiveTab] = useState('stream');
+    const [classroomContent, setClassroomContent] = useState<ClassroomItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedChapter, setSelectedChapter] = useState<ClassroomItem | null>(null);
+
+    React.useEffect(() => {
+        loadContent();
+    }, []);
+
+    const loadContent = async () => {
+        try {
+            const data = await fetchClassroomContent();
+            setClassroomContent(data);
+        } catch (error) {
+            console.error('Failed to load classroom content', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleItemPress = (item: ClassroomItem) => {
+        if (item.type === 'quiz' && item.questions) {
+            navigation.navigate('Quiz', {
+                quizData: {
+                    id: item.id,
+                    quizId: item.id,
+                    questions: item.questions,
+                    title: item.title
+                }
+            });
+        } else if (item.type === 'chapter') {
+            setSelectedChapter(item);
+        }
+    };
 
     // Mock Data
     const teachers = [
         { id: 1, name: 'Mrs. Sharma', subject: 'Mathematics', avatar: 'https://i.pravatar.cc/150?img=1' },
         { id: 2, name: 'Mr. Gupta', subject: 'Science', avatar: 'https://i.pravatar.cc/150?img=11' },
-    ];
-
-    const announcements = [
-        { id: 1, teacher: 'Mrs. Sharma', date: '2 hrs ago', content: 'Don\'t forget to complete the Geometry quiz by tomorrow!', priority: 'high' },
-        { id: 2, teacher: 'Mr. Gupta', date: 'Yesterday', content: 'New Science experiment kits have arrived. Collect them from the lab.', priority: 'normal' },
     ];
 
     const liveClasses = [
@@ -38,7 +70,7 @@ const ClassroomScreen = () => {
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>My Classroom</Text>
+                    <Text style={styles.headerTitle}>{t('classroom.title')}</Text>
                     <TouchableOpacity style={styles.notificationButton}>
                         <Ionicons name="notifications-outline" size={24} color="#fff" />
                     </TouchableOpacity>
@@ -63,12 +95,12 @@ const ClassroomScreen = () => {
                         >
                             <View style={styles.liveBadge}>
                                 <View style={styles.liveDot} />
-                                <Text style={styles.liveText}>LIVE NOW</Text>
+                                <Text style={styles.liveText}>{t('classroom.liveNow')}</Text>
                             </View>
                             <Text style={styles.liveSubject}>{liveClasses.find(c => c.status === 'live')?.subject}</Text>
                             <Text style={styles.liveTopic}>{liveClasses.find(c => c.status === 'live')?.topic}</Text>
                             <TouchableOpacity style={styles.joinButton}>
-                                <Text style={styles.joinButtonText}>Join Class</Text>
+                                <Text style={styles.joinButtonText}>{t('classroom.joinClass')}</Text>
                             </TouchableOpacity>
                         </LinearGradient>
                     </Animated.View>
@@ -76,7 +108,7 @@ const ClassroomScreen = () => {
 
                 <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     {/* Teachers Horizontal Scroll */}
-                    <Text style={styles.sectionTitle}>My Teachers</Text>
+                    <Text style={styles.sectionTitle}>{t('classroom.myTeachers')}</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teachersRow}>
                         {teachers.map((teacher, index) => (
                             <Animated.View key={teacher.id} entering={FadeInDown.delay(200 + index * 50)} style={styles.teacherCard}>
@@ -87,35 +119,67 @@ const ClassroomScreen = () => {
                         ))}
                     </ScrollView>
 
-                    {/* Announcements */}
-                    <Text style={styles.sectionTitle}>Announcements</Text>
-                    {announcements.map((item, index) => (
-                        <Animated.View key={item.id} entering={FadeInDown.delay(300 + index * 100)} style={styles.announcementCard}>
-                            <View style={styles.announcementHeader}>
-                                <View style={styles.announcementAuthor}>
-                                    <View style={[styles.avatarPlaceholder, { backgroundColor: item.priority === 'high' ? '#FFEBEE' : '#E3F2FD' }]}>
-                                        <Text style={{ color: item.priority === 'high' ? '#D32F2F' : '#1976D2', fontWeight: 'bold' }}>
-                                            {item.teacher.charAt(0)}
+                    {/* Class Stream */}
+                    <Text style={styles.sectionTitle}>Class Stream</Text>
+
+                    {loading ? (
+                        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
+                    ) : classroomContent.length === 0 ? (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyText}>No content posted yet.</Text>
+                        </View>
+                    ) : (
+                        classroomContent.map((item, index) => (
+                            <Animated.View key={item.id} entering={FadeInDown.delay(300 + index * 100)} style={styles.streamCard}>
+                                <TouchableOpacity onPress={() => handleItemPress(item)} activeOpacity={0.9}>
+                                    <View style={styles.cardHeader}>
+                                        <View style={[styles.iconContainer, { backgroundColor: item.type === 'quiz' ? '#E3F2FD' : '#E8F5E9' }]}>
+                                            <MaterialCommunityIcons
+                                                name={item.type === 'quiz' ? 'format-list-checks' : 'book-open-page-variant'}
+                                                size={24}
+                                                color={item.type === 'quiz' ? '#1976D2' : '#2E7D32'}
+                                            />
+                                        </View>
+                                        <View style={styles.cardInfo}>
+                                            <Text style={styles.cardTitle}>{item.title}</Text>
+                                            <Text style={styles.cardSubtitle}>{item.subtitle} • {item.teacher}</Text>
+                                            <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.cardDescription} numberOfLines={3}>{item.description}</Text>
+                                    <View style={styles.cardFooter}>
+                                        <Text style={styles.actionText}>
+                                            {item.type === 'quiz' ? 'Take Quiz' : 'Read Chapter'}
                                         </Text>
+                                        <MaterialCommunityIcons name="arrow-right" size={16} color={theme.colors.primary} />
                                     </View>
-                                    <View>
-                                        <Text style={styles.authorName}>{item.teacher}</Text>
-                                        <Text style={styles.dateText}>{item.date}</Text>
-                                    </View>
-                                </View>
-                                {item.priority === 'high' && (
-                                    <View style={styles.highPriorityBadge}>
-                                        <Text style={styles.priorityText}>Important</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <Text style={styles.announcementContent}>{item.content}</Text>
-                        </Animated.View>
-                    ))}
+                                </TouchableOpacity>
+                            </Animated.View>
+                        ))
+                    )}
 
                     <View style={{ height: 100 }} />
                 </ScrollView>
             </View>
+
+            {/* Chapter Viewer Modal */}
+            <Modal visible={!!selectedChapter} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedChapter(null)}>
+                <View style={styles.modalContainer}>
+                    <View style={styles.modalHeader}>
+                        <TouchableOpacity onPress={() => setSelectedChapter(null)} style={styles.closeButton}>
+                            <MaterialCommunityIcons name="close" size={24} color="#333" />
+                        </TouchableOpacity>
+                        <Text style={styles.modalTitle} numberOfLines={1}>{selectedChapter?.title}</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+                    <NativeScrollView contentContainerStyle={styles.modalContent}>
+                        <Text style={styles.contentTitle}>{selectedChapter?.title}</Text>
+                        <Text style={styles.contentMeta}>{selectedChapter?.subtitle} • By {selectedChapter?.teacher}</Text>
+                        <View style={styles.divider} />
+                        <Text style={styles.contentText}>{selectedChapter?.fullContent || selectedChapter?.description}</Text>
+                    </NativeScrollView>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -312,6 +376,124 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#444',
         lineHeight: 20,
+    },
+    streamCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: spacing.md,
+        marginBottom: spacing.md,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        marginBottom: spacing.sm,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    cardInfo: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 2,
+    },
+    cardSubtitle: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 2,
+    },
+    cardDate: {
+        fontSize: 10,
+        color: '#999',
+    },
+    cardDescription: {
+        fontSize: 14,
+        color: '#444',
+        lineHeight: 20,
+        marginBottom: spacing.md,
+    },
+    cardFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+        paddingTop: spacing.sm,
+    },
+    actionText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: theme.colors.primary,
+    },
+    emptyState: {
+        padding: spacing.xl,
+        alignItems: 'center',
+    },
+    emptyText: {
+        color: '#666',
+        fontSize: 16,
+    },
+    // Modal Styles
+    modalContainer: {
+        flex: 1,
+        backgroundColor: '#fff',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        backgroundColor: '#fff',
+    },
+    closeButton: {
+        padding: spacing.sm,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        flex: 1,
+        textAlign: 'center',
+    },
+    modalContent: {
+        padding: spacing.lg,
+        paddingBottom: 40,
+    },
+    contentTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: spacing.xs,
+    },
+    contentMeta: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: spacing.lg,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#eee',
+        marginBottom: spacing.lg,
+    },
+    contentText: {
+        fontSize: 16,
+        color: '#333',
+        lineHeight: 24,
     },
 });
 

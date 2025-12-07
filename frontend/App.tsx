@@ -10,6 +10,15 @@ import { theme } from './src/theme';
 import { LogBox, View, ActivityIndicator } from 'react-native';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { decode, encode } from 'base-64';
+
+if (!global.btoa) {
+  global.btoa = encode;
+}
+
+if (!global.atob) {
+  global.atob = decode;
+}
 
 // Completely suppress all console warnings in development
 if (__DEV__) {
