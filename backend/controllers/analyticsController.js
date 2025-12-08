@@ -100,7 +100,8 @@ exports.getStudentAnalytics = async (req, res) => {
             averageScore: averageScore,
             recentActivity,
             xpHistory,
-            gamePerformance
+            gamePerformance,
+            learnerCategory: student.learnerCategory || 'neutral'
         };
 
         // Prevent caching to ensure fresh data
@@ -138,7 +139,8 @@ exports.getClassAnalytics = async (req, res) => {
                 streak: student.streak || 0,
                 completedTasks: completed,
                 pendingTasks: pending,
-                lastActive: student.updatedAt // Approximate last active
+                lastActive: student.updatedAt, // Approximate last active
+                learnerCategory: student.learnerCategory || 'neutral'
             };
         });
 

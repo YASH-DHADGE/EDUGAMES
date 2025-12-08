@@ -377,6 +377,56 @@ const updateQuiz = async (req, res) => {
     }
 };
 
+// @desc    Create a new student
+// @route   POST /api/teacher/student
+// @access  Private/Teacher
+const createStudent = async (req, res) => {
+    try {
+        const { name, email, password, grade } = req.body;
+
+        // Validation
+        if (!name || !email || !password || !grade) {
+            return res.status(400).json({ message: 'Please provide all fields' });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        // Validate grade
+        const selectedClass = parseInt(grade);
+        if (isNaN(selectedClass) || selectedClass < 6 || selectedClass > 12) {
+            return res.status(400).json({ message: 'Grade must be between 6 and 12' });
+        }
+
+        // Create student with automatic teacher assignment
+        const student = await User.create({
+            name,
+            email,
+            password, // Will be hashed by pre-save hook
+            role: 'student',
+            selectedClass,
+            teacherId: req.user._id, // Auto-assign to creating teacher
+            status: 'active', // Automatically active since created by teacher
+        });
+
+        res.status(201).json({
+            _id: student._id,
+            name: student.name,
+            email: student.email,
+            role: student.role,
+            selectedClass: student.selectedClass,
+            teacherId: student.teacherId,
+            status: student.status,
+        });
+    } catch (error) {
+        console.error('Error creating student:', error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTeacherStats,
     createQuiz,
@@ -386,6 +436,7 @@ module.exports = {
     assignCustomChapter,
     getMyContent,
     getStudents,
+    createStudent,
     deleteQuiz,
     deleteChapter,
     updateQuiz

@@ -21,7 +21,8 @@ const StudentAnalyticsScreen = () => {
         quizHistory: [],
         weakAreas: [],
         performanceTrend: [],
-        gamePerformance: []
+        gamePerformance: [],
+        learnerCategory: 'neutral'
     });
 
     useEffect(() => {
@@ -100,6 +101,37 @@ const StudentAnalyticsScreen = () => {
                         <Text style={styles.statLabel}>Lessons Done</Text>
                     </LinearGradient>
                 </View>
+
+                {/* Learner Profile Section */}
+                {stats.learnerCategory && stats.learnerCategory !== 'neutral' && (
+                    <View style={styles.section}>
+                        <LinearGradient
+                            colors={stats.learnerCategory === 'fast' ? ['#E8F5E9', '#C8E6C9'] : ['#FFF3E0', '#FFE0B2']}
+                            style={styles.learnerProfileCard}
+                        >
+                            <View style={styles.learnerIconContainer}>
+                                <MaterialCommunityIcons
+                                    name={stats.learnerCategory === 'fast' ? 'lightning-bolt' : 'clock-alert-outline'}
+                                    size={40}
+                                    color={stats.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00'}
+                                />
+                            </View>
+                            <View style={styles.learnerInfo}>
+                                <Text style={[
+                                    styles.learnerTitle,
+                                    { color: stats.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00' }
+                                ]}>
+                                    {stats.learnerCategory === 'fast' ? 'Fast Learner' : 'Needs Attention'}
+                                </Text>
+                                <Text style={styles.learnerDescription}>
+                                    {stats.learnerCategory === 'fast'
+                                        ? 'This student grasps concepts quickly and demonstrates high accuracy in tasks.'
+                                        : 'This student may need additional support or more time to understand complex topics.'}
+                                </Text>
+                            </View>
+                        </LinearGradient>
+                    </View>
+                )}
 
                 {/* Game Proficiency Section */}
                 <View style={styles.section}>
@@ -437,6 +469,39 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#333',
         fontWeight: '500',
+    },
+    learnerProfileCard: {
+        padding: 20,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    learnerIconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: 'rgba(255,255,255,0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    learnerInfo: {
+        flex: 1,
+    },
+    learnerTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    learnerDescription: {
+        fontSize: 14,
+        color: '#555',
+        lineHeight: 20,
     },
 });
 

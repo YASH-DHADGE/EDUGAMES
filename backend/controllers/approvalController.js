@@ -54,6 +54,11 @@ exports.approveUser = async (req, res) => {
         userToApprove.approvedAt = Date.now();
         userToApprove.rejectionReason = null; // Clear any previous rejection reason
 
+        // Auto-assign student to approving teacher if not already assigned
+        if (!userToApprove.teacherId && approver.role === 'teacher' && userToApprove.role === 'student') {
+            userToApprove.teacherId = approver._id;
+        }
+
         await userToApprove.save();
 
         res.json({ message: 'User approved successfully', user: userToApprove });

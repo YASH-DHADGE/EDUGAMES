@@ -202,6 +202,26 @@ const TeacherGameAnalyticsScreen = () => {
                                                 <MaterialCommunityIcons name="check-circle" size={14} color="#4CAF50" />
                                                 <Text style={styles.studentStatText}>{student.completedTasks || 0} Tasks</Text>
                                             </View>
+
+                                            {/* Learner Category Badge */}
+                                            {student.learnerCategory && student.learnerCategory !== 'neutral' && (
+                                                <View style={[
+                                                    styles.learnerBadge,
+                                                    { backgroundColor: student.learnerCategory === 'fast' ? '#E8F5E9' : '#FFF3E0' }
+                                                ]}>
+                                                    <MaterialCommunityIcons
+                                                        name={student.learnerCategory === 'fast' ? 'lightning-bolt' : 'clock-alert-outline'}
+                                                        size={12}
+                                                        color={student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00'}
+                                                    />
+                                                    <Text style={[
+                                                        styles.learnerBadgeText,
+                                                        { color: student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00' }
+                                                    ]}>
+                                                        {student.learnerCategory === 'fast' ? 'Fast Learner' : 'Slow Learner'}
+                                                    </Text>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 </View>
@@ -468,6 +488,18 @@ const styles = StyleSheet.create({
         marginTop: 8,
         textAlign: 'center',
         paddingHorizontal: 40,
+    },
+    learnerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        gap: 4,
+    },
+    learnerBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
     },
 });
 
