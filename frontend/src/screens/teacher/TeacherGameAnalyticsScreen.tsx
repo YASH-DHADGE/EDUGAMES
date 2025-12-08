@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Text, ActivityIndicator, Dimensions } fro
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BarChart } from 'react-native-chart-kit';
 import api from '../../services/api';
 
 const { width } = Dimensions.get('window');
@@ -116,141 +117,197 @@ const TeacherGameAnalyticsScreen = () => {
                     </View>
                 )}
 
-                {/* Top 3 Podium */}
-                {topThree.length > 0 && (
-                    <View style={styles.podiumSection}>
-                        <Text style={styles.sectionTitle}>🏆 Top Performers</Text>
-
-                        <View style={styles.podium}>
-                            {/* 2nd Place */}
-                            {topThree[1] && (
-                                <View style={styles.podiumItem}>
-                                    <LinearGradient
-                                        colors={getRankColor(2)}
-                                        style={[styles.podiumCard, styles.secondPlace]}
-                                    >
-                                        <MaterialCommunityIcons name="medal" size={32} color="#fff" />
-                                        <Text style={styles.podiumName}>{topThree[1].name}</Text>
-                                        <Text style={styles.podiumXP}>{topThree[1].xp || 0} XP</Text>
-                                    </LinearGradient>
-                                    <View style={[styles.podiumBase, { height: 70, backgroundColor: '#E0E0E0' }]} />
+                {/* Learner Distribution Chart */}
+                {classStats.length > 0 && (
+                    <View style={styles.chartSection}>
+                        <Text style={styles.sectionTitle}>📊 Learner Distribution</Text>
+                        <View style={styles.chartCard}>
+                            <BarChart
+                                data={{
+                                    labels: ['Fast', 'Neutral', 'Slow'],
+                                    datasets: [{
+                                        data: [
+                                            classStats.filter(s => s.learnerCategory === 'fast').length,
+                                            classStats.filter(s => s.learnerCategory === 'neutral').length,
+                                            classStats.filter(s => s.learnerCategory === 'slow').length
+                                        ]
+                                    }]
+                                }}
+                                width={width - 48}
+                                height={220}
+                                yAxisLabel=""
+                                yAxisSuffix=""
+                                chartConfig={{
+                                    backgroundColor: '#6200EA',
+                                    backgroundGradientFrom: '#6200EA',
+                                    backgroundGradientTo: '#7C4DFF',
+                                    decimalPlaces: 0,
+                                    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                                    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                                    style: { borderRadius: 16 },
+                                    barPercentage: 0.7,
+                                }}
+                                style={styles.chart}
+                            />
+                            <View style={styles.chartLegend}>
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: '#4CAF50' }]} />
+                                    <Text style={styles.legendText}>Fast: {classStats.filter(s => s.learnerCategory === 'fast').length}</Text>
                                 </View>
-                            )}
-
-                            {/* 1st Place */}
-                            {topThree[0] && (
-                                <View style={styles.podiumItem}>
-                                    <LinearGradient
-                                        colors={getRankColor(1)}
-                                        style={[styles.podiumCard, styles.firstPlace]}
-                                    >
-                                        <MaterialCommunityIcons name="crown" size={40} color="#fff" />
-                                        <Text style={styles.podiumName}>{topThree[0].name}</Text>
-                                        <Text style={styles.podiumXP}>{topThree[0].xp || 0} XP</Text>
-                                    </LinearGradient>
-                                    <View style={[styles.podiumBase, { height: 100, backgroundColor: '#FFD700' }]} />
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: '#9E9E9E' }]} />
+                                    <Text style={styles.legendText}>Neutral: {classStats.filter(s => s.learnerCategory === 'neutral').length}</Text>
                                 </View>
-                            )}
-
-                            {/* 3rd Place */}
-                            {topThree[2] && (
-                                <View style={styles.podiumItem}>
-                                    <LinearGradient
-                                        colors={getRankColor(3)}
-                                        style={[styles.podiumCard, styles.thirdPlace]}
-                                    >
-                                        <MaterialCommunityIcons name="medal-outline" size={28} color="#fff" />
-                                        <Text style={styles.podiumName}>{topThree[2].name}</Text>
-                                        <Text style={styles.podiumXP}>{topThree[2].xp || 0} XP</Text>
-                                    </LinearGradient>
-                                    <View style={[styles.podiumBase, { height: 50, backgroundColor: '#CD7F32' }]} />
+                                <View style={styles.legendItem}>
+                                    <View style={[styles.legendDot, { backgroundColor: '#FF6B6B' }]} />
+                                    <Text style={styles.legendText}>Slow: {classStats.filter(s => s.learnerCategory === 'slow').length}</Text>
                                 </View>
-                            )}
+                            </View>
                         </View>
                     </View>
                 )}
 
+                {/* Top 3 Podium */}
+                {
+                    topThree.length > 0 && (
+                        <View style={styles.podiumSection}>
+                            <Text style={styles.sectionTitle}>🏆 Top Performers</Text>
+
+                            <View style={styles.podium}>
+                                {/* 2nd Place */}
+                                {topThree[1] && (
+                                    <View style={styles.podiumItem}>
+                                        <LinearGradient
+                                            colors={getRankColor(2)}
+                                            style={[styles.podiumCard, styles.secondPlace]}
+                                        >
+                                            <MaterialCommunityIcons name="medal" size={32} color="#fff" />
+                                            <Text style={styles.podiumName}>{topThree[1].name}</Text>
+                                            <Text style={styles.podiumXP}>{topThree[1].xp || 0} XP</Text>
+                                        </LinearGradient>
+                                        <View style={[styles.podiumBase, { height: 70, backgroundColor: '#E0E0E0' }]} />
+                                    </View>
+                                )}
+
+                                {/* 1st Place */}
+                                {topThree[0] && (
+                                    <View style={styles.podiumItem}>
+                                        <LinearGradient
+                                            colors={getRankColor(1)}
+                                            style={[styles.podiumCard, styles.firstPlace]}
+                                        >
+                                            <MaterialCommunityIcons name="crown" size={40} color="#fff" />
+                                            <Text style={styles.podiumName}>{topThree[0].name}</Text>
+                                            <Text style={styles.podiumXP}>{topThree[0].xp || 0} XP</Text>
+                                        </LinearGradient>
+                                        <View style={[styles.podiumBase, { height: 100, backgroundColor: '#FFD700' }]} />
+                                    </View>
+                                )}
+
+                                {/* 3rd Place */}
+                                {topThree[2] && (
+                                    <View style={styles.podiumItem}>
+                                        <LinearGradient
+                                            colors={getRankColor(3)}
+                                            style={[styles.podiumCard, styles.thirdPlace]}
+                                        >
+                                            <MaterialCommunityIcons name="medal-outline" size={28} color="#fff" />
+                                            <Text style={styles.podiumName}>{topThree[2].name}</Text>
+                                            <Text style={styles.podiumXP}>{topThree[2].xp || 0} XP</Text>
+                                        </LinearGradient>
+                                        <View style={[styles.podiumBase, { height: 50, backgroundColor: '#CD7F32' }]} />
+                                    </View>
+                                )}
+                            </View>
+                        </View>
+                    )
+                }
+
                 {/* Full Leaderboard */}
-                {classStats.length > 0 && (
-                    <View style={styles.leaderboardSection}>
-                        <Text style={styles.sectionTitle}>📊 Full Leaderboard</Text>
+                {
+                    classStats.length > 0 && (
+                        <View style={styles.leaderboardSection}>
+                            <Text style={styles.sectionTitle}>📊 Full Leaderboard</Text>
 
-                        {classStats.map((student: any, index: number) => (
-                            <View
-                                key={student.id}
-                                style={[
-                                    styles.studentCard,
-                                    index < 3 && styles.topThreeCard
-                                ]}
-                            >
-                                <View style={styles.studentInfo}>
-                                    <LinearGradient
-                                        colors={index < 3 ? getRankColor(index + 1) : ['#E0E0E0', '#BDBDBD']}
-                                        style={styles.rankBadge}
-                                    >
-                                        <Text style={styles.rankText}>{index + 1}</Text>
-                                    </LinearGradient>
+                            {classStats.map((student: any, index: number) => (
+                                <View
+                                    key={student.id}
+                                    style={[
+                                        styles.studentCard,
+                                        index < 3 && styles.topThreeCard
+                                    ]}
+                                >
+                                    <View style={styles.studentInfo}>
+                                        <LinearGradient
+                                            colors={index < 3 ? getRankColor(index + 1) : ['#E0E0E0', '#BDBDBD']}
+                                            style={styles.rankBadge}
+                                        >
+                                            <Text style={styles.rankText}>{index + 1}</Text>
+                                        </LinearGradient>
 
-                                    <View style={styles.studentDetails}>
-                                        <Text style={styles.studentName}>{student.name}</Text>
-                                        <View style={styles.studentStats}>
-                                            <View style={styles.statItem}>
-                                                <MaterialCommunityIcons name="trophy" size={14} color="#FFD700" />
-                                                <Text style={styles.studentStatText}>{student.xp || 0} XP</Text>
-                                            </View>
-                                            <View style={styles.statItem}>
-                                                <MaterialCommunityIcons name="check-circle" size={14} color="#4CAF50" />
-                                                <Text style={styles.studentStatText}>{student.completedTasks || 0} Tasks</Text>
-                                            </View>
-
-                                            {/* Learner Category Badge */}
-                                            {student.learnerCategory && student.learnerCategory !== 'neutral' && (
-                                                <View style={[
-                                                    styles.learnerBadge,
-                                                    { backgroundColor: student.learnerCategory === 'fast' ? '#E8F5E9' : '#FFF3E0' }
-                                                ]}>
-                                                    <MaterialCommunityIcons
-                                                        name={student.learnerCategory === 'fast' ? 'lightning-bolt' : 'clock-alert-outline'}
-                                                        size={12}
-                                                        color={student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00'}
-                                                    />
-                                                    <Text style={[
-                                                        styles.learnerBadgeText,
-                                                        { color: student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00' }
-                                                    ]}>
-                                                        {student.learnerCategory === 'fast' ? 'Fast Learner' : 'Slow Learner'}
-                                                    </Text>
+                                        <View style={styles.studentDetails}>
+                                            <Text style={styles.studentName}>{student.name}</Text>
+                                            <View style={styles.studentStats}>
+                                                <View style={styles.statItem}>
+                                                    <MaterialCommunityIcons name="trophy" size={14} color="#FFD700" />
+                                                    <Text style={styles.studentStatText}>{student.xp || 0} XP</Text>
                                                 </View>
-                                            )}
+                                                <View style={styles.statItem}>
+                                                    <MaterialCommunityIcons name="check-circle" size={14} color="#4CAF50" />
+                                                    <Text style={styles.studentStatText}>{student.completedTasks || 0} Tasks</Text>
+                                                </View>
+
+                                                {/* Learner Category Badge */}
+                                                {student.learnerCategory && student.learnerCategory !== 'neutral' && (
+                                                    <View style={[
+                                                        styles.learnerBadge,
+                                                        { backgroundColor: student.learnerCategory === 'fast' ? '#E8F5E9' : '#FFF3E0' }
+                                                    ]}>
+                                                        <MaterialCommunityIcons
+                                                            name={student.learnerCategory === 'fast' ? 'lightning-bolt' : 'clock-alert-outline'}
+                                                            size={12}
+                                                            color={student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00'}
+                                                        />
+                                                        <Text style={[
+                                                            styles.learnerBadgeText,
+                                                            { color: student.learnerCategory === 'fast' ? '#2E7D32' : '#EF6C00' }
+                                                        ]}>
+                                                            {student.learnerCategory === 'fast' ? 'Fast Learner' : 'Slow Learner'}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
+
+                                    <MaterialCommunityIcons
+                                        name="chevron-right"
+                                        size={24}
+                                        color="#999"
+                                        onPress={() => (navigation as any).navigate('StudentAnalytics', {
+                                            studentId: student.id,
+                                            studentName: student.name
+                                        })}
+                                    />
                                 </View>
+                            ))}
+                        </View>
+                    )
+                }
 
-                                <MaterialCommunityIcons
-                                    name="chevron-right"
-                                    size={24}
-                                    color="#999"
-                                    onPress={() => (navigation as any).navigate('StudentAnalytics', {
-                                        studentId: student.id,
-                                        studentName: student.name
-                                    })}
-                                />
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-                {classStats.length === 0 && (
-                    <View style={styles.emptyState}>
-                        <MaterialCommunityIcons name="account-group-outline" size={64} color="#ccc" />
-                        <Text style={styles.emptyText}>No students found</Text>
-                        <Text style={styles.emptySubtext}>Students will appear here once they join your class</Text>
-                    </View>
-                )}
+                {
+                    classStats.length === 0 && (
+                        <View style={styles.emptyState}>
+                            <MaterialCommunityIcons name="account-group-outline" size={64} color="#ccc" />
+                            <Text style={styles.emptyText}>No students found</Text>
+                            <Text style={styles.emptySubtext}>Students will appear here once they join your class</Text>
+                        </View>
+                    )
+                }
 
                 <View style={{ height: 40 }} />
-            </ScrollView>
-        </View>
+            </ScrollView >
+        </View >
     );
 };
 
@@ -500,6 +557,49 @@ const styles = StyleSheet.create({
     learnerBadgeText: {
         fontSize: 10,
         fontWeight: '700',
+    },
+    chartSection: {
+        marginTop: 24,
+        paddingHorizontal: 16,
+    },
+    chartCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        paddingTop: 16,
+        paddingBottom: 20,
+        paddingHorizontal: 16,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    chart: {
+        marginVertical: 8,
+        borderRadius: 16,
+    },
+    chartLegend: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginTop: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#f0f0f0',
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    legendDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 6,
+    },
+    legendText: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '600',
     },
 });
 

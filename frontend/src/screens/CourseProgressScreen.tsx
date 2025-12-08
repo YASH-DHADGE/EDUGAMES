@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Dimensions, RefreshControl } from 'react-
 import { Text, Surface, ProgressBar, ActivityIndicator, Button, Card, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BarChart, PieChart } from 'react-native-chart-kit';
+import { BarChart, PieChart, LineChart } from 'react-native-chart-kit';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { assessCourseOutcome, CourseOutcome } from '../utils/deltaAssessment';
 import { formatTime } from '../utils/formatTime';
@@ -20,13 +20,21 @@ const CourseProgressScreen = () => {
 
     const [loading, setLoading] = useState(true);
     const [outcome, setOutcome] = useState<CourseOutcome | null>(null);
+    const [gameResults, setGameResults] = useState<any[]>([]);
 
     const fetchAnalytics = async () => {
         setLoading(true);
-        // Simulate async load or actually call the utility
         try {
             const data = await assessCourseOutcome(userId, classLevel, subject);
             setOutcome(data);
+
+            // Fetch game results for chart
+            const key = `gameResults_${userId}_${classLevel}_${subject}`;
+            const storedResults = await import('@react-native-async-storage/async-storage').then(m => m.default.getItem(key));
+            if (storedResults) {
+                const results = JSON.parse(storedResults);
+                setGameResults(Array.isArray(results) ? results.slice(-10).reverse() : []);
+            }
         } catch (error) {
             console.error("Failed to load analytics", error);
         } finally {
@@ -188,6 +196,49 @@ const CourseProgressScreen = () => {
                         {renderProficiencyChart()}
                     </Card.Content>
                 </Card>
+
+                {/* Performance Trend Chart */}
+                {gameResults.length > 0 && (
+                    <Card style={styles.card}>
+                        <Card.Title title="Performance Trend" left={(props) => <MaterialCommunityIcons {...props} name="chart-line" />} />
+                        <Card.Content>
+                            <LineChart
+                                data={{
+                                    labels: gameResults.map((_, idx) => `G${idx + 1}`),
+                                    datasets: [{
+                                        data: gameResults.map(game => {
+                                            const score = typeof game.score === 'number' ? game.score : 0;
+                                            return Math.min(Math.max(score, 0), 100);
+                                        }),
+                                        color: () => '#6200EA',
+                                        strokeWidth: 3
+                                    }]
+                                }}
+                                width={screenWidth - 64}
+                                height={220}
+                                chartConfig={{
+                                    backgroundColor: '#ffffff',
+                                    backgroundGradientFrom: '#ffffff',
+                                    backgroundGradientTo: '#f8f8f8',
+                                    decimalPlaces: 0,
+                                    color: (opacity = 1) => `rgba(98, 0, 234, ${opacity})`,
+                                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity * 0.7})`,
+                                    style: { borderRadius: 16 },
+                                    propsForDots: {
+                                        r: '6',
+                                        strokeWidth: '2',
+                                        stroke: '#6200EA'
+                                    }
+                                }}
+                                bezier
+                                style={{ marginVertical: 8, borderRadius: 16 }}
+                            />
+                            <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginTop: 8 }}>
+                                Score progression across last {gameResults.length} games
+                            </Text>
+                        </Card.Content>
+                    </Card>
+                )}
 
                 {/* Recommendations */}
                 <Card style={styles.card}>

@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Text, ActivityIndicator, Dimensions } fro
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LineChart } from 'react-native-chart-kit';
 import api from '../../services/api';
 
 const { width } = Dimensions.get('window');
@@ -130,6 +131,56 @@ const StudentAnalyticsScreen = () => {
                                 </Text>
                             </View>
                         </LinearGradient>
+                    </View>
+                )}
+
+                {/* Performance Trend Chart */}
+                {stats.gamePerformance && stats.gamePerformance.length > 0 && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialCommunityIcons name="chart-line" size={24} color="#6200EA" />
+                            <Text style={styles.sectionTitle}>Performance Trend</Text>
+                        </View>
+                        <View style={styles.chartCard}>
+                            <LineChart
+                                data={{
+                                    labels: stats.gamePerformance.slice(0, 5).reverse().map((game: any, idx: number) => `G${idx + 1}`),
+                                    datasets: [{
+                                        data: stats.gamePerformance.slice(0, 5).reverse().map((game: any) => {
+                                            const score = typeof game.delta === 'number' ? game.delta : game.bestScore || 0;
+                                            return Math.min(Math.max(score, 0), 100);
+                                        }),
+                                        color: () => stats.learnerCategory === 'fast' ? '#4CAF50' : stats.learnerCategory === 'slow' ? '#FF6B6B' : '#6200EA',
+                                        strokeWidth: 3
+                                    }]
+                                }}
+                                width={width - 48}
+                                height={220}
+                                chartConfig={{
+                                    backgroundColor: '#ffffff',
+                                    backgroundGradientFrom: '#ffffff',
+                                    backgroundGradientTo: '#f8f8f8',
+                                    decimalPlaces: 0,
+                                    color: (opacity = 1) => stats.learnerCategory === 'fast'
+                                        ? `rgba(76, 175, 80, ${opacity})`
+                                        : stats.learnerCategory === 'slow'
+                                            ? `rgba(255, 107, 107, ${opacity})`
+                                            : `rgba(98, 0, 234, ${opacity})`,
+                                    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity * 0.7})`,
+                                    style: { borderRadius: 16 },
+                                    propsForDots: {
+                                        r: '6',
+                                        strokeWidth: '2',
+                                        stroke: stats.learnerCategory === 'fast' ? '#4CAF50' : stats.learnerCategory === 'slow' ? '#FF6B6B' : '#6200EA'
+                                    }
+                                }}
+                                bezier
+                                style={styles.chart}
+                            />
+                            <Text style={styles.chartCaption}>
+                                Score progression across last {Math.min(stats.gamePerformance.length, 5)} games
+                            </Text>
+                        </View>
                     </View>
                 )}
 
@@ -502,6 +553,45 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#555',
         lineHeight: 20,
+    },
+    chartCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    chart: {
+        marginVertical: 8,
+        borderRadius: 16,
+    },
+    chartCaption: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 12,
+        marginHorizontal: 16,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        color: '#666',
+        fontWeight: '600',
+        marginTop: 12,
+    },
+    emptyStateSubtext: {
+        fontSize: 13,
+        color: '#999',
+        marginTop: 4,
     },
 });
 
