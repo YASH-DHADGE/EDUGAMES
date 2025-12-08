@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { spacing } from '../../theme';
 import Animated, { FadeInDown, FadeIn, BounceIn, ZoomIn } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 interface Question {
     question: string;
@@ -88,12 +90,14 @@ const OddOneOutScreen = () => {
     const [gameOver, setGameOver] = useState(false);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [showExplanation, setShowExplanation] = useState(false);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
 
     const styles = createStyles(isDark);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (gameActive && timeLeft > 0) {
+            startTimer();
             interval = setInterval(() => {
                 setTimeLeft((prev) => {
                     if (prev <= 1) {
@@ -103,8 +107,13 @@ const OddOneOutScreen = () => {
                     return prev - 1;
                 });
             }, 1000);
+        } else {
+            stopTimer();
         }
-        return () => clearInterval(interval);
+        return () => {
+            clearInterval(interval);
+            stopTimer();
+        };
     }, [gameActive, timeLeft]);
 
     const handleAnswer = (index: number) => {
@@ -126,16 +135,28 @@ const OddOneOutScreen = () => {
                 setSelectedAnswer(null);
                 setShowExplanation(false);
             } else {
-                endGame();
+                const finalScore = correct ? score + 10 : score;
+                endGame(finalScore);
             }
         }, 2000);
     };
 
-    const endGame = () => {
+    const endGame = (finalScore?: number) => {
         setGameActive(false);
         setGameOver(true);
-        const xpReward = Math.floor(score / 2);
+        stopTimer();
+        const endScore = finalScore !== undefined ? finalScore : score;
+        const xpReward = Math.floor(endScore / 2);
         addXP(xpReward, 'Odd One Out');
+
+        saveGameResult({
+            gameId: 'odd_one_out',
+            score: endScore,
+            maxScore: EDUCATIONAL_QUESTIONS.length * 10,
+            timeTaken: elapsedTime,
+            difficulty: 'easy',
+            completedLevel: 1
+        });
     };
 
     const resetGame = () => {
@@ -146,6 +167,7 @@ const OddOneOutScreen = () => {
         setGameOver(false);
         setSelectedAnswer(null);
         setShowExplanation(false);
+        resetGameTimer();
     };
 
     if (gameOver) {
@@ -182,6 +204,7 @@ const OddOneOutScreen = () => {
                             >
                                 <Text variant="displaySmall" style={styles.scoreText}>{score}</Text>
                             </LinearGradient>
+                            <Text variant="titleMedium" style={{ marginBottom: 10, color: isDark ? '#F1F5F9' : '#333' }}>Time: {displayTime}</Text>
                             <Text variant="bodyLarge" style={styles.resultMessage}>
                                 {score >= 60 ? 'Excellent! 🎉' : score >= 40 ? 'Good Job! 👍' : 'Keep Learning! 📚'}
                             </Text>
@@ -245,7 +268,7 @@ const OddOneOutScreen = () => {
                     <View style={styles.statItem}>
                         <MaterialCommunityIcons name="clock-outline" size={20} color={timeLeft < 20 ? "#f44336" : "#30cfd0"} />
                         <Text variant="titleMedium" style={[styles.statLabel, timeLeft < 20 && { color: '#f44336' }]}>
-                            Time: {timeLeft}s
+                            Left: {timeLeft}s (Time: {displayTime})
                         </Text>
                     </View>
                     <View style={styles.statItem}>

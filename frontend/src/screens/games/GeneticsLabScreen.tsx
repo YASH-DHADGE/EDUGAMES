@@ -14,6 +14,8 @@ import GameLayout from '../../components/games/GameLayout';
 import TutorialOverlay from '../../components/games/TutorialOverlay';
 import { useGameProgress } from '../../hooks/useGameProgress';
 import { soundManager } from '../../utils/soundEffects';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 const { width } = Dimensions.get('window');
 const HEADER_WIDTH = 70;
@@ -97,6 +99,7 @@ const DraggableAllele = ({ allele, source, onDrop, disabled }: { allele: Allele,
 
 const GeneticsLabScreen = () => {
     const { score, addScore, endGame, resetGame } = useGameProgress('genetics_lab');
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
     const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
     // Grid state: 2x2 array of strings (e.g., "Tt")
     const [gridState, setGridState] = useState<string[][]>([["", ""], ["", ""]]);
@@ -206,8 +209,15 @@ const GeneticsLabScreen = () => {
     const handleReset = () => {
         setGridState([["", ""], ["", ""]]);
         setCompleted(false);
+        resetGameTimer();
+        startTimer();
         soundManager.playClick();
     };
+
+    useEffect(() => {
+        startTimer();
+        return () => stopTimer();
+    }, []);
 
     useEffect(() => {
         checkCompletion();
@@ -231,18 +241,27 @@ const GeneticsLabScreen = () => {
         }
     };
 
-    const nextLevel = () => {
+    const nextLevel = async () => {
         if (currentLevelIdx < LEVELS.length - 1) {
             setCurrentLevelIdx(prev => prev + 1);
             setGridState([["", ""], ["", ""]]);
             setCompleted(false);
         } else {
-            endGame();
+            stopTimer();
+            endGame(score, elapsedTime);
+            await saveGameResult({
+                gameId: 'genetics_lab',
+                score: score,
+                maxScore: LEVELS.length * 100,
+                timeTaken: elapsedTime,
+                difficulty: 'medium',
+                completedLevel: LEVELS.length
+            });
         }
     };
 
     return (
-        <GameLayout title="Genetics Lab" score={score} lives={3}>
+        <GameLayout title="Genetics Lab" score={score} lives={3} timer={displayTime}>
             <GestureHandlerRootView style={{ flex: 1 }}>
                 <View style={styles.container}>
                     <LinearGradient colors={['#E8F5E9', '#A5D6A7']} style={styles.background} />
@@ -314,6 +333,7 @@ const GeneticsLabScreen = () => {
                             <Surface style={styles.resultCard} elevation={5}>
                                 <Text style={styles.resultEmoji}>🧬</Text>
                                 <Text variant="headlineSmall" style={styles.resultTitle}>Perfect Match!</Text>
+                                <Text variant="titleMedium" style={{ marginBottom: 20 }}>Time: {displayTime}</Text>
                                 <Button mode="contained" onPress={nextLevel}>
                                     {currentLevelIdx < LEVELS.length - 1 ? "Next Level" : "Finish Lab"}
                                 </Button>

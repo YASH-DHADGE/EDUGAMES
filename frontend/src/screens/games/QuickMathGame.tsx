@@ -9,6 +9,8 @@ import { spacing } from '../../theme';
 import Animated, { FadeInDown, FadeIn, BounceIn, ZoomIn } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { soundManager } from '../../utils/soundEffects';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 interface MathQuestion {
     question: string;
@@ -75,6 +77,7 @@ const QuickMathGame = () => {
     const [timeLeft, setTimeLeft] = useState(30);
     const [gameOver, setGameOver] = useState(false);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
 
     const styles = createStyles(isDark);
 
@@ -88,14 +91,25 @@ const QuickMathGame = () => {
 
     useEffect(() => {
         if (timeLeft > 0 && !gameOver) {
+            startTimer();
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
             return () => clearTimeout(timer);
         } else if (timeLeft === 0) {
+            stopTimer(); // Stop counting up
             // Award XP based on score
             const xpReward = Math.floor(score / 2); // 5 XP per correct answer at level 1
             addXP(xpReward, 'Quick Math Game');
             soundManager.playSuccess();
             setGameOver(true);
+
+            saveGameResult({
+                gameId: 'quick_math',
+                score: score,
+                maxScore: 1000,
+                timeTaken: elapsedTime,
+                difficulty: difficulty.toString(),
+                completedLevel: 1
+            });
         }
     }, [timeLeft, gameOver]);
 
@@ -134,6 +148,9 @@ const QuickMathGame = () => {
         setGameOver(false);
         setCurrentQuestion(generateQuestion(1));
         setSelectedAnswer(null);
+        setCurrentQuestion(generateQuestion(1));
+        setSelectedAnswer(null);
+        resetGameTimer();
     };
 
     if (gameOver) {
@@ -170,6 +187,7 @@ const QuickMathGame = () => {
                             >
                                 <Text variant="displaySmall" style={styles.scoreText}>{score}</Text>
                             </LinearGradient>
+                            <Text variant="titleMedium" style={{ marginBottom: 10, color: isDark ? '#F1F5F9' : '#333' }}>Time: {displayTime}</Text>
                             <Text variant="bodyLarge" style={styles.resultMessage}>
                                 Questions Solved: {questionCount}
                             </Text>
@@ -234,7 +252,7 @@ const QuickMathGame = () => {
                     <View style={styles.statItem}>
                         <MaterialCommunityIcons name="clock-outline" size={20} color={timeLeft < 10 ? "#f44336" : "#FF9800"} />
                         <Text variant="titleMedium" style={[styles.statLabel, timeLeft < 10 && { color: '#f44336' }]}>
-                            Time: {timeLeft}s
+                            {timeLeft}s
                         </Text>
                     </View>
                     <View style={styles.statItem}>

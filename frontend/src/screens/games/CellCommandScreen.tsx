@@ -18,6 +18,8 @@ import TutorialOverlay from '../../components/games/TutorialOverlay';
 import { useGameProgress } from '../../hooks/useGameProgress';
 import { spacing } from '../../theme';
 import { soundManager } from '../../utils/soundEffects';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 const { height } = Dimensions.get('window');
 
@@ -91,6 +93,7 @@ const DraggableItem = ({ item, onDrop, completed }: { item: any, onDrop: (id: st
 
 const CellCommandScreen = () => {
     const { score, addScore, endGame } = useGameProgress('cell_command');
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
     const [showTutorial, setShowTutorial] = useState(true);
     const [placedItems, setPlacedItems] = useState<string[]>([]);
     const [currentOrganelleIndex, setCurrentOrganelleIndex] = useState(0);
@@ -101,11 +104,13 @@ const CellCommandScreen = () => {
     const membraneScale = useSharedValue(1);
 
     React.useEffect(() => {
+        startTimer();
         membraneScale.value = withRepeat(
             withSpring(1.05, { damping: 2000, stiffness: 50 }), // Subtle breath
             -1,
             true
         );
+        return () => stopTimer();
     }, []);
 
     const membraneStyle = useAnimatedStyle(() => ({
@@ -125,7 +130,17 @@ const CellCommandScreen = () => {
             if (currentOrganelleIndex < ORGANELLES.length - 1) {
                 setCurrentOrganelleIndex(prev => prev + 1);
             } else {
-                endGame();
+                stopTimer();
+                endGame(score + 50, elapsedTime);
+                alert(`Mission Complete!\nTime Taken: ${displayTime}`);
+                saveGameResult({
+                    gameId: 'cell_command',
+                    score: score + 50,
+                    maxScore: ORGANELLES.length * 50,
+                    timeTaken: elapsedTime,
+                    difficulty: 'easy',
+                    completedLevel: 1
+                });
             }
         } else {
             soundManager.playWrong();
@@ -135,7 +150,8 @@ const CellCommandScreen = () => {
     const currentTarget = ORGANELLES[currentOrganelleIndex];
 
     return (
-        <GameLayout title="Cell Command" score={score}>
+        <GameLayout title="Cell Command" score={score} timer={displayTime}>
+
             <GestureHandlerRootView style={styles.container}>
                 <LinearGradient
                     colors={['#1A0033', '#000033', '#000']}

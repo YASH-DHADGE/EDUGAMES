@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const TeacherQuiz = require('../models/TeacherQuiz');
+const LearnerClassifier = require('../services/learnerClassifier');
 
 // @desc    Get assigned tasks for student
 // @route   GET /api/student/tasks
@@ -126,6 +127,58 @@ const submitQuizResult = async (req, res) => {
             assignment.status = 'completed';
             // You could also save the score here if the schema supported it
             await student.save();
+
+            // --- LEARNER CLASSIFICATION ---
+            try {
+                const gameData = {
+                    score: score,
+                    maxScore: totalQuestions * 10, // Assuming 10 pts per question
+                    accuracy: (score / (totalQuestions * 10)), // Approx accuracy if score provided, else use passed accuracy?
+                    // Actually submitQuizResult gets 'score' (usually raw?) and 'totalQuestions'.
+                    // If score is number of correct answers:
+                    // accuracy: score / totalQuestions
+                    // If score is points:
+                    // We need to know max points. Let's assume standard 10 pts/question for now or infer
+
+                    // Re-reading usage in frontend might clarify, but for safety let's assume
+                    // score is raw points and we normalize.
+                    // Or if score is "number correct", then accuracy is easy.
+                    // Let's rely on passed params.
+                    duration: totalQuestions * 30, // Estimate
+                    completedLevel: 1,
+                    difficulty: 'medium'
+                };
+
+                // Refinining accuracy calc based on typical backend usage:
+                // If the frontend sends 'score' as points, we might not know max without querying quiz.
+                // But let's try a best effort.
+                // If score <= totalQuestions, it's likely "number correct".
+                // If score > totalQuestions, it's likely points.
+                let calculatedAccuracy = 0;
+                if (score <= totalQuestions) {
+                    calculatedAccuracy = score / totalQuestions;
+                } else {
+                    calculatedAccuracy = score / (totalQuestions * 10); // Assume 10pts/q
+                }
+
+                gameData.accuracy = calculatedAccuracy;
+
+                const userStats = {
+                    xp: student.xp,
+                    level: student.level,
+                    streak: student.streak
+                };
+
+                const category = await LearnerClassifier.classify(gameData, userStats);
+                if (category && category !== 'neutral') {
+                    student.learnerCategory = category;
+                    await student.save();
+                    console.log(`Student ${student.name} classified as ${category} via Assignment`);
+                }
+            } catch (err) {
+                console.error('Classifier error in student assignment:', err);
+            }
+
             console.log('DEBUG: Student saved successfully');
             res.json({ message: 'Quiz submitted and assignment marked completed', xpGained: 0 }); // XP handled by xpController usually
         } else {

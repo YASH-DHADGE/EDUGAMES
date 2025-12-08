@@ -18,6 +18,7 @@ interface GameLayoutProps {
     showSoundToggle?: boolean;
     headerColor?: string[];
     onLevelSelect?: () => void; // Optional override
+    timer?: string;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -28,7 +29,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     onQuit,
     showSoundToggle = true,
     headerColor = ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0)'],
-    onLevelSelect
+    onLevelSelect,
+    timer
 }) => {
     const navigation = useNavigation();
     const theme = useTheme();
@@ -84,6 +86,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({
                     </Text>
 
                     <View style={styles.statsRow}>
+                        {timer && (
+                            <Surface style={styles.statBadge} elevation={2}>
+                                <MaterialCommunityIcons name="clock-outline" size={20} color="#4CAF50" />
+                                <Text style={styles.statText}>{timer}</Text>
+                            </Surface>
+                        )}
                         {lives !== undefined && (
                             <Surface style={styles.statBadge} elevation={2}>
                                 <MaterialCommunityIcons name="heart" size={20} color="#ff5252" />

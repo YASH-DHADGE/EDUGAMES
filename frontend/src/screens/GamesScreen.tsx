@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Dimensions } from 'react-native';
 import { Text, Surface, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,6 +8,9 @@ import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanim
 import { spacing } from '../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { getUserGameStats } from '../services/gamesService';
+import { formatTime } from '../hooks/useGameTimer';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +27,8 @@ interface GameItem {
     category: GameCategory;
     isNew?: boolean;
     isPopular?: boolean;
+    params?: any;
+    gameId?: string; // Add gameId mapping for stats
 }
 
 const GamesScreen = ({ navigation }: any) => {
@@ -31,19 +36,69 @@ const GamesScreen = ({ navigation }: any) => {
     const insets = useSafeAreaInsets();
     const { isMobile } = useResponsive();
     const styles = createStyles(isDark, isMobile);
+    const [gameStats, setGameStats] = useState<Record<string, { lastPlayed: string, lastTimeTaken: number, highScore: number }>>({});
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchStats = async () => {
+                const stats = await getUserGameStats();
+                setGameStats(stats);
+            };
+            fetchStats();
+        }, [])
+    );
 
     const allGames: GameItem[] = [
+        {
+            id: 100,
+            title: 'Concept Chain',
+            description: 'Connect related concepts',
+            icon: 'link-variant',
+            color: '#FF9800',
+            gradient: ['#F7971E', '#FFD200'],
+            route: 'GameZone',
+            params: { gameType: 'conceptChain', classLevel: '6', subject: 'science', difficulty: 'medium' },
+            category: 'Science',
+            isNew: true,
+            gameId: 'conceptChain'
+        },
         {
             id: 13,
             title: 'Genetics Lab',
             description: 'Solve the Punnett Square',
             icon: 'flask',
             color: '#4CAF50',
-            gradient: ['#11998e', '#38ef7d'], // Teal-Green
+            gradient: ['#11998e', '#38ef7d'],
             route: 'GeneticsLab',
             category: 'Science',
             isNew: true,
-            isPopular: true
+            isPopular: true,
+            gameId: 'genetics_lab'
+        },
+        {
+            id: 101,
+            title: 'Time Travel Debug',
+            description: 'Order historical events',
+            icon: 'history',
+            color: '#3F51B5',
+            gradient: ['#1a237e', '#3949AB'],
+            route: 'TimeTravelDebug',
+            category: 'Logic',
+            isNew: true,
+            gameId: 'time_travel_debug'
+        },
+        // ... (other games need 'gameId' added to match what they save)
+        {
+            id: 103,
+            title: 'Algebra Heist',
+            description: 'Offline Detective Math',
+            icon: 'incognito',
+            color: '#37474F',
+            gradient: ['#263238', '#546E7A'],
+            route: 'AlgebraHeistMap',
+            category: 'Logic',
+            isNew: true,
+            gameId: 'algebra_heist'
         },
         {
             id: 9,
@@ -51,10 +106,11 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Build a cell part by part',
             icon: 'dna',
             color: '#9C27B0',
-            gradient: ['#4A00E0', '#8E2DE2'], // Purple-Blue
+            gradient: ['#4A00E0', '#8E2DE2'],
             route: 'CellCommand',
             category: 'Science',
-            isNew: true
+            isNew: true,
+            gameId: 'cell_command'
         },
         {
             id: 6,
@@ -62,9 +118,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Learn about cell parts',
             icon: 'microscope',
             color: '#2196F3',
-            gradient: ['#2193b0', '#6dd5ed'], // Cool Blue
+            gradient: ['#2193b0', '#6dd5ed'],
             route: 'CellStructureQuiz',
-            category: 'Science'
+            category: 'Science',
+            gameId: 'cell_structure_quiz'
         },
         {
             id: 3,
@@ -72,9 +129,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Learn human anatomy',
             icon: 'human-male-height',
             color: '#4CAF50',
-            gradient: ['#56ab2f', '#a8e063'], // Lush Green
+            gradient: ['#56ab2f', '#a8e063'],
             route: 'LabelOrganGame',
-            category: 'Science'
+            category: 'Science',
+            gameId: 'label_organ'
         },
         {
             id: 7,
@@ -82,9 +140,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Physics force simulation',
             icon: 'axis-arrow',
             color: '#673AB7',
-            gradient: ['#4e4376', '#2b5876'], // Royal Blue/Purple
+            gradient: ['#4e4376', '#2b5876'],
             route: 'ForcePlayGame',
-            category: 'Science'
+            category: 'Science',
+            gameId: 'force_play'
         },
         {
             id: 12,
@@ -92,9 +151,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Match enzymes to nutrients',
             icon: 'stomach',
             color: '#E91E63',
-            gradient: ['#ec008c', '#fc6767'], // Pink-Red
+            gradient: ['#ec008c', '#fc6767'],
             route: 'DigestiveDash',
-            category: 'Science'
+            category: 'Science',
+            gameId: 'digestive_dash'
         },
         {
             id: 5,
@@ -102,9 +162,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Chemistry equation balancing',
             icon: 'flask-outline',
             color: '#00BCD4',
-            gradient: ['#3a7bd5', '#00d2ff'], // Cyan-Blue
+            gradient: ['#3a7bd5', '#00d2ff'],
             route: 'ChemistryBalanceGame',
-            category: 'Science'
+            category: 'Science',
+            gameId: 'chemistry_balance'
         },
         {
             id: 4,
@@ -112,9 +173,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Solve math problems fast',
             icon: 'calculator-variant',
             color: '#FF9800',
-            gradient: ['#f12711', '#f5af19'], // Red-Orange
+            gradient: ['#f12711', '#f5af19'],
             route: 'QuickMathGame',
-            category: 'Math'
+            category: 'Math',
+            gameId: 'quick_math'
         },
         {
             id: 1,
@@ -122,9 +184,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Find the different tile',
             icon: 'shape-plus',
             color: '#E91E63',
-            gradient: ['#FF416C', '#FF4B2B'], // Sunset Red
+            gradient: ['#FF416C', '#FF4B2B'],
             route: 'OddOneOut',
-            category: 'Logic'
+            category: 'Logic',
+            gameId: 'odd_one_out'
         },
         {
             id: 2,
@@ -132,9 +195,10 @@ const GamesScreen = ({ navigation }: any) => {
             description: 'Match pairs of cards',
             icon: 'cards-playing-outline',
             color: '#9C27B0',
-            gradient: ['#cc2b5e', '#753a88'], // Purple-Pink
+            gradient: ['#cc2b5e', '#753a88'],
             route: 'MemoryMatch',
-            category: 'Logic'
+            category: 'Logic',
+            gameId: 'memory_match'
         },
     ];
 
@@ -155,62 +219,83 @@ const GamesScreen = ({ navigation }: any) => {
                 <Text style={styles.sectionTitle}>{title}</Text>
             </View>
             <View style={styles.gamesGrid}>
-                {games.map((game, index) => (
-                    <Animated.View
-                        key={game.id}
-                        entering={FadeInRight.delay(delayOffset + index * 100).springify()}
-                        style={[styles.gameCardWrapper, { width: isMobile ? '100%' : '48%' }]}
-                    >
-                        <TouchableOpacity
-                            activeOpacity={0.9}
-                            onPress={() => navigation.navigate(game.route)}
+                {games.map((game, index) => {
+                    const stats = game.gameId ? gameStats[game.gameId] : undefined;
+
+                    return (
+                        <Animated.View
+                            key={game.id}
+                            entering={FadeInRight.delay(delayOffset + index * 100).springify()}
+                            style={[styles.gameCardWrapper, { width: isMobile ? '100%' : '48%' }]}
                         >
-                            <Surface style={styles.gameCard} elevation={3}>
-                                <LinearGradient
-                                    colors={game.gradient}
-                                    style={styles.gameCardGradient}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    {/* Background decorative icon */}
-                                    <MaterialCommunityIcons
-                                        name={game.icon as any}
-                                        size={100}
-                                        color="rgba(255,255,255,0.15)"
-                                        style={styles.bgIcon}
-                                    />
+                            <TouchableOpacity
+                                activeOpacity={0.9}
+                                onPress={() => navigation.navigate(game.route, game.params)}
+                            >
+                                <Surface style={styles.gameCard} elevation={3}>
+                                    <LinearGradient
+                                        colors={game.gradient}
+                                        style={styles.gameCardGradient}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name={game.icon as any}
+                                            size={100}
+                                            color="rgba(255,255,255,0.15)"
+                                            style={styles.bgIcon}
+                                        />
 
-                                    <View style={styles.cardContent}>
-                                        <View style={styles.iconContainer}>
-                                            <MaterialCommunityIcons name={game.icon as any} size={32} color="#fff" />
-                                        </View>
-                                        <View style={styles.textContainer}>
-                                            <Text style={styles.gameTitle} numberOfLines={1}>{game.title}</Text>
-                                            <Text style={styles.gameDesc} numberOfLines={2}>{game.description}</Text>
-                                        </View>
-                                        <View style={styles.playButton}>
-                                            <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-                                        </View>
-                                    </View>
+                                        <View style={styles.cardContent}>
+                                            <View style={styles.iconContainer}>
+                                                <MaterialCommunityIcons name={game.icon as any} size={32} color="#fff" />
+                                            </View>
+                                            <View style={styles.textContainer}>
+                                                <Text style={styles.gameTitle} numberOfLines={1}>{game.title}</Text>
+                                                <Text style={styles.gameDesc} numberOfLines={stats ? 1 : 2}>{game.description}</Text>
 
-                                    {(game.isNew || game.isPopular) && (
-                                        <View style={[
-                                            styles.badge,
-                                            { backgroundColor: game.isNew ? '#2979FF' : '#FFC107' }
-                                        ]}>
-                                            <Text style={[
-                                                styles.badgeText,
-                                                { color: game.isNew ? '#fff' : '#3E2723' }
+                                                {/* Stats Display */}
+                                                {stats && (
+                                                    <View style={styles.statsRow}>
+                                                        {stats.lastTimeTaken !== undefined && (
+                                                            <View style={styles.statChip}>
+                                                                <MaterialCommunityIcons name="clock-outline" size={12} color="#fff" style={{ marginRight: 2 }} />
+                                                                <Text style={styles.statText}>{formatTime(stats.lastTimeTaken)}</Text>
+                                                            </View>
+                                                        )}
+                                                        {stats.lastPlayed && (
+                                                            <View style={styles.statChip}>
+                                                                <MaterialCommunityIcons name="calendar-clock" size={12} color="#fff" style={{ marginRight: 2 }} />
+                                                                <Text style={styles.statText}>Played</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                )}
+                                            </View>
+                                            <View style={styles.playButton}>
+                                                <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+                                            </View>
+                                        </View>
+
+                                        {(game.isNew || game.isPopular) && !stats && (
+                                            <View style={[
+                                                styles.badge,
+                                                { backgroundColor: game.isNew ? '#2979FF' : '#FFC107' }
                                             ]}>
-                                                {game.isNew ? 'NEW' : 'HOT'}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </LinearGradient>
-                            </Surface>
-                        </TouchableOpacity>
-                    </Animated.View>
-                ))}
+                                                <Text style={[
+                                                    styles.badgeText,
+                                                    { color: game.isNew ? '#fff' : '#3E2723' }
+                                                ]}>
+                                                    {game.isNew ? 'NEW' : 'HOT'}
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </LinearGradient>
+                                </Surface>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    );
+                })}
             </View>
         </Animated.View>
     );
@@ -257,7 +342,7 @@ const GamesScreen = ({ navigation }: any) => {
 const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#121212' : '#F5F7FA', // Slightly gray background for modern feel
+        backgroundColor: isDark ? '#121212' : '#F5F7FA',
     },
     scrollView: {
         flex: 1,
@@ -339,7 +424,7 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     gameCard: {
         borderRadius: 20,
         overflow: 'hidden',
-        height: 120, // Taller cards
+        height: 120,
     },
     gameCardGradient: {
         flex: 1,
@@ -374,6 +459,24 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
         color: 'rgba(255,255,255,0.85)',
         fontSize: 12,
         fontWeight: '500'
+    },
+    statsRow: {
+        flexDirection: 'row',
+        marginTop: 6,
+        gap: 8,
+    },
+    statChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    statText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
     playButton: {
         width: 32,

@@ -70,17 +70,39 @@ export const useGameProgress = (gameId: string) => {
         }
     }, [lives]);
 
-    const endGame = useCallback(async () => {
+    const endGame = useCallback(async (finalScore?: number, timeTaken: number = 0) => {
         setIsGameOver(true);
-        soundManager.playWrong(); // Game Over sound
-        await saveProgress(score);
+        const actualScore = finalScore !== undefined ? finalScore : score;
 
-        // Award XP based on score (e.g., 10% of score)
-        if (score > 0) {
-            const xpEarned = Math.floor(score / 10);
+        // Only play wrong sound if it was a loss (simplification, can be refined)
+        // soundManager.playWrong(); 
+
+        await saveProgress(actualScore);
+
+        // Award XP
+        if (actualScore > 0) {
+            const xpEarned = Math.floor(actualScore / 10);
             addXP(xpEarned, `Played ${gameId}`);
         }
-    }, [score, gameId, highScore]);
+
+        // Save to Database via Service
+        // We defer this to specific screens if they have more detailed data, 
+        // OR we can try to save a generic result here. 
+        // Since useGameProgress doesn't know "maxScore" or "accuracy", 
+        // it's better if the screen calls saveGameResult directly?
+        // Actually, let's keep this generic hook focused on local state and *provide* a save helper,
+        // OR rely on the screen to call the service.
+        // BUT for simpler migration, let's try to save what we know.
+
+        /* 
+           Ideally, screens should call saveGameResult themselves because they have context 
+           (level difficulty, max score, etc.).
+           useGameProgress acts as a local state manager.
+           I will NOT put saveGameResult here to avoid partial data submission.
+           I'll update screens to call saveGameResult.
+        */
+
+    }, [score, gameId, highScore, addXP]);
 
     const resetGame = useCallback(() => {
         setScore(0);

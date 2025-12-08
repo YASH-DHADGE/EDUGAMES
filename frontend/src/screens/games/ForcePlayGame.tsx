@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { spacing } from '../../theme';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring, BounceIn, ZoomIn } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 const ForcePlayGame = () => {
     const navigation = useNavigation();
@@ -22,6 +24,12 @@ const ForcePlayGame = () => {
     const [round, setRound] = useState(1);
     const [showResult, setShowResult] = useState(false);
     const [gameOver, setGameOver] = useState(false);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
+
+    React.useEffect(() => {
+        startTimer();
+        return () => stopTimer();
+    }, []);
 
     const objectPosition = useSharedValue(0);
 
@@ -59,9 +67,27 @@ const ForcePlayGame = () => {
                 setShowResult(false);
                 objectPosition.value = 0;
             } else {
-                const xpReward = Math.floor(score / 2);
+                const finalScore = score + points; // Since this runs after setScore(score + points) but in closure
+                // Wait, submitPrediction updates score then sets Timeout.
+                // The points added in THIS turn need to be accounted for if this is the last round.
+                // Actually, submitPrediction logic:
+                // setScore(score + points)
+                // setTimeout -> checks round < 5.
+                // If round == 5, we are done. The score we see here is the OLD score because variables don't update in closure.
+                // So we must recalculate finalScore here as well.
+                const xpReward = Math.floor(finalScore / 2);
                 addXP(xpReward, 'Force Simulator');
+                stopTimer();
                 setGameOver(true);
+
+                saveGameResult({
+                    gameId: 'force_play',
+                    score: finalScore,
+                    maxScore: 100,
+                    timeTaken: elapsedTime,
+                    difficulty: 'medium',
+                    completedLevel: 1
+                });
             }
         }, 2500);
     };
@@ -75,6 +101,8 @@ const ForcePlayGame = () => {
         setShowResult(false);
         setGameOver(false);
         objectPosition.value = 0;
+        resetGameTimer();
+        startTimer();
     };
 
     // ... (rest of the component)
@@ -113,6 +141,7 @@ const ForcePlayGame = () => {
                             >
                                 <Text variant="displaySmall" style={styles.scoreText}>{score}/100</Text>
                             </LinearGradient>
+                            <Text variant="titleMedium" style={{ marginBottom: 10, color: '#333' }}>Time: {displayTime}</Text>
                             <Text variant="bodyLarge" style={styles.resultMessage}>
                                 {score >= 80 ? 'Physics Master! ⚡' : score >= 60 ? 'Great Work! 🔬' : 'Keep Learning! 📚'}
                             </Text>
@@ -160,7 +189,10 @@ const ForcePlayGame = () => {
                         onPress={() => navigation.goBack()}
                     />
                     <Text variant="titleLarge" style={styles.headerTitle}>Force Simulator</Text>
-                    <View style={{ width: 40 }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>{displayTime}</Text>
+                    </View>
                 </View>
 
                 <LinearGradient
@@ -172,9 +204,9 @@ const ForcePlayGame = () => {
                         <Text variant="titleMedium" style={styles.scoreLabel}>Score: {score}</Text>
                     </View>
                     <View style={styles.scoreItem}>
-                        <MaterialCommunityIcons name="counter" size={20} color={isDark ? '#667eea' : '#667eea'} />
                         <Text variant="bodyMedium" style={styles.questionLabel}>Round {round}/5</Text>
                     </View>
+
                 </LinearGradient>
 
                 <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.gameArea}>

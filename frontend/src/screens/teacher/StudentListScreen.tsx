@@ -69,6 +69,19 @@ const StudentListScreen = () => {
                     </Text>
                 </View>
             </View>
+            {item.learnerCategory && item.learnerCategory !== 'neutral' && (
+                <View style={[
+                    styles.statusBadge,
+                    { marginLeft: 8, backgroundColor: item.learnerCategory === 'fast' ? '#E0E7FF' : '#FFEDD5' }
+                ]}>
+                    <Text style={[
+                        styles.statusText,
+                        { color: item.learnerCategory === 'fast' ? '#4F46E5' : '#EA580C' }
+                    ]}>
+                        {item.learnerCategory.toUpperCase()} LEARNER
+                    </Text>
+                </View>
+            )}
             <View style={styles.actions}>
                 <TouchableOpacity
                     style={[styles.actionButton, styles.analyticsButton]}

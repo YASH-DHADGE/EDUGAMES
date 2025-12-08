@@ -30,6 +30,8 @@ import { soundManager } from '../../utils/soundEffects';
 
 import { useResponsive } from '../../hooks/useResponsive';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 interface CardComponentProps {
     card: Card;
@@ -210,7 +212,7 @@ const MemoryMatchScreen = () => {
     const [moves, setMoves] = useState(0);
     const [gameActive, setGameActive] = useState(false);
     const [gameWon, setGameWon] = useState(false);
-    const [timeElapsed, setTimeElapsed] = useState(0);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
 
     const styles = createStyles(isDark);
     const TOTAL_PAIRS = 6;
@@ -228,13 +230,11 @@ const MemoryMatchScreen = () => {
     }, []);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
         if (gameActive) {
-            interval = setInterval(() => {
-                setTimeElapsed((prev) => prev + 1);
-            }, 1000);
+            startTimer();
+        } else {
+            stopTimer();
         }
-        return () => clearInterval(interval);
     }, [gameActive]);
 
     useEffect(() => {
@@ -295,7 +295,7 @@ const MemoryMatchScreen = () => {
         setFlippedCards([]);
         setMatchedPairs([]);
         setMoves(0);
-        setTimeElapsed(0);
+        resetGameTimer();
         setGameActive(true);
         setGameWon(false);
     };
@@ -309,21 +309,28 @@ const MemoryMatchScreen = () => {
 
     const endGame = () => {
         setGameActive(false);
+        stopTimer();
         setGameWon(true);
         soundManager.playSuccess();
-        const score = Math.max(0, 1000 - moves * 10 - timeElapsed * 2);
+        const score = Math.max(0, 1000 - moves * 10 - elapsedTime * 2);
         const xpReward = Math.floor(score / 20);
         addXP(xpReward, 'Memory Match');
+
+        saveGameResult({
+            gameId: 'memory_match',
+            score: score,
+            maxScore: 1000,
+            timeTaken: elapsedTime,
+            difficulty: 'medium',
+            completedLevel: 1
+        });
     };
 
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    // formatTime helper removed as it describes useGameTimer
+
 
     if (gameWon) {
-        const score = Math.max(0, 1000 - moves * 10 - timeElapsed * 2);
+        const score = Math.max(0, 1000 - moves * 10 - elapsedTime * 2);
         return (
             <LinearGradient
                 colors={['#fa709a', '#fee140']}
@@ -363,7 +370,7 @@ const MemoryMatchScreen = () => {
                                 <View style={styles.statBox}>
                                     <MaterialCommunityIcons name="clock-outline" size={24} color="#fa709a" />
                                     <Text variant="bodySmall" style={styles.statLabel}>Time</Text>
-                                    <Text variant="titleMedium" style={styles.statValue}>{formatTime(timeElapsed)}</Text>
+                                    <Text variant="titleMedium" style={styles.statValue}>{displayTime}</Text>
                                 </View>
                                 <View style={styles.statBox}>
                                     <MaterialCommunityIcons name="star" size={24} color="#FFD700" />
@@ -428,7 +435,7 @@ const MemoryMatchScreen = () => {
                     </View>
                     <View style={styles.statItem}>
                         <MaterialCommunityIcons name="clock-outline" size={20} color="#fa709a" />
-                        <Text variant="titleMedium" style={styles.statItemLabel}>Time: {formatTime(timeElapsed)}</Text>
+                        <Text variant="titleMedium" style={styles.statItemLabel}>Time: {displayTime}</Text>
                     </View>
                     <View style={styles.statItem}>
                         <MaterialCommunityIcons name="cards" size={20} color="#fa709a" />

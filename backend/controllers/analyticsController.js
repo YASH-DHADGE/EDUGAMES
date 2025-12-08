@@ -29,21 +29,35 @@ exports.getStudentAnalytics = async (req, res) => {
             .slice(0, 5)
             .map(a => ({
                 type: a.type,
-                title: a.quizId?.title || a.chapterId?.title || a.teacherChapterId?.title || 'Unknown Task',
+                title: a.quizId?.title || a.chapterId?.name || a.teacherChapterId?.title || 'Unknown Task',
                 date: a.assignedAt,
                 status: a.status
             }));
 
-        // XP History (Mock for now, as we don't track daily XP history yet)
-        const xpHistory = [
-            { date: 'Mon', xp: 0 },
-            { date: 'Tue', xp: 0 },
-            { date: 'Wed', xp: 0 },
-            { date: 'Thu', xp: 0 },
-            { date: 'Fri', xp: 0 },
-            { date: 'Sat', xp: 0 },
-            { date: 'Sun', xp: student.xp || 0 } // Show current XP as Sunday for now
-        ];
+        // XP History
+        let xpHistory = [];
+        if (student.xpHistory && student.xpHistory.length > 0) {
+            // Get last 7 days
+            const last7Days = student.xpHistory
+                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                .slice(-7);
+
+            xpHistory = last7Days.map(entry => ({
+                date: new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short' }),
+                xp: entry.xp
+            }));
+        } else {
+            // Fallback if no history
+            xpHistory = [
+                { date: 'Mon', xp: 0 },
+                { date: 'Tue', xp: 0 },
+                { date: 'Wed', xp: 0 },
+                { date: 'Thu', xp: 0 },
+                { date: 'Fri', xp: 0 },
+                { date: 'Sat', xp: 0 },
+                { date: 'Sun', xp: student.xp || 0 }
+            ];
+        }
 
         const analytics = {
             xp: student.xp || 0,

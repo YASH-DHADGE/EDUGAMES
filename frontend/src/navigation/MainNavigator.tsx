@@ -25,6 +25,7 @@ import CellStructureQuiz from '../screens/games/CellStructureQuiz';
 import CellCommandScreen from '../screens/games/CellCommandScreen';
 import DigestiveDashScreen from '../screens/games/DigestiveDashScreen';
 import GeneticsLabScreen from '../screens/games/GeneticsLabScreen';
+import GameZoneScreen from '../screens/GameZoneScreen';
 
 // Import other screens
 import SettingsScreenNew from '../screens/SettingsScreenNew';
@@ -77,6 +78,14 @@ const MainNavigator = () => {
             <Stack.Screen name="CellCommand" component={CellCommandScreen} />
             <Stack.Screen name="DigestiveDash" component={DigestiveDashScreen} />
             <Stack.Screen name="GeneticsLab" component={GeneticsLabScreen} />
+            <Stack.Screen name="GameZone" component={GameZoneScreen} />
+
+            {/* New Games */}
+
+            <Stack.Screen name="TimeTravelDebug" component={require('../screens/games/TimeTravelDebugScreen').default} />
+            <Stack.Screen name="AlgebraHeistMap" component={require('../screens/games/AlgebraHeist/AlgebraHeistMapScreen').default} />
+            <Stack.Screen name="AlgebraHeistCase" component={require('../screens/games/AlgebraHeist/AlgebraHeistCaseScreen').default} />
+
 
             {/* Other Screens */}
             <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />

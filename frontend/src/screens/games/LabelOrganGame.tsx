@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { spacing } from '../../theme';
 import Animated, { FadeInDown, FadeIn, BounceIn, ZoomIn } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 interface OrganLabel {
     id: string;
@@ -70,11 +72,14 @@ const LabelOrganGame = () => {
     const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
     const [gameOver, setGameOver] = useState(false);
     const [questions, setQuestions] = useState<typeof ALL_QUESTIONS>([]);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
 
     // Initialize with random questions
     useEffect(() => {
         const shuffled = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5);
         setQuestions(shuffled.slice(0, 10));
+        startTimer();
+        return () => stopTimer();
     }, []);
 
     const handleAnswer = (organId: string) => {
@@ -90,9 +95,19 @@ const LabelOrganGame = () => {
                 setCurrentQuestion(currentQuestion + 1);
                 setSelectedAnswer(null);
             } else {
-                const xpReward = Math.floor(score / 5);
+                const finalScore = correct ? score + 20 : score;
+                const xpReward = Math.floor(finalScore / 5);
                 addXP(xpReward, 'Label the Organ');
                 setGameOver(true);
+                stopTimer();
+                saveGameResult({
+                    gameId: 'label_organ',
+                    score: finalScore,
+                    maxScore: 200,
+                    timeTaken: elapsedTime,
+                    difficulty: 'medium',
+                    completedLevel: 1
+                });
             }
         }, 1000);
     };
@@ -104,6 +119,8 @@ const LabelOrganGame = () => {
         setGameOver(false);
         const shuffled = [...ALL_QUESTIONS].sort(() => Math.random() - 0.5);
         setQuestions(shuffled.slice(0, 10));
+        resetGameTimer();
+        startTimer();
     };
 
     // ... (rest of the component)
@@ -142,6 +159,7 @@ const LabelOrganGame = () => {
                             >
                                 <Text variant="displaySmall" style={styles.scoreText}>{score}/200</Text>
                             </LinearGradient>
+                            <Text variant="titleMedium" style={{ marginBottom: 10, color: '#333' }}>Time: {displayTime}</Text>
                             <Text variant="bodyLarge" style={styles.resultMessage}>
                                 {score >= 160 ? 'Anatomy Expert! 🏥' : score >= 120 ? 'Well Done! ❤️' : 'Keep Learning! 📚'}
                             </Text>
@@ -195,7 +213,10 @@ const LabelOrganGame = () => {
                         onPress={() => navigation.goBack()}
                     />
                     <Text variant="titleLarge" style={styles.headerTitle}>Label the Organ</Text>
-                    <View style={{ width: 40 }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>{displayTime}</Text>
+                    </View>
                 </View>
 
                 <LinearGradient
@@ -207,9 +228,9 @@ const LabelOrganGame = () => {
                         <Text variant="titleMedium" style={styles.scoreLabel}>Score: {score}</Text>
                     </View>
                     <View style={styles.scoreItem}>
-                        <MaterialCommunityIcons name="human" size={20} color={isDark ? '#f093fb' : '#f5576c'} />
                         <Text variant="bodyMedium" style={styles.questionLabel}>Question {currentQuestion + 1}/{questions.length}</Text>
                     </View>
+
                 </LinearGradient>
 
                 <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.gameArea}>

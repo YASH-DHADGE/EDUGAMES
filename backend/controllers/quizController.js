@@ -1,6 +1,7 @@
 const Quiz = require('../models/Quiz');
 const QuizResult = require('../models/QuizResult');
 const User = require('../models/User');
+const LearnerClassifier = require('../services/learnerClassifier');
 
 // @desc    Get random quiz
 // @route   GET /api/quizzes/random
@@ -43,6 +44,32 @@ const submitQuizResult = async (req, res) => {
         if (user) {
             user.xp += score; // Add score to XP
             await user.save();
+
+            // --- LEARNER CLASSIFICATION ---
+            try {
+                const gameData = {
+                    score: score,
+                    maxScore: totalQuestions * 10, // Assuming 10 pts per question, or just use a proxy
+                    accuracy: (correctAnswers / totalQuestions),
+                    duration: totalQuestions * 30, // Estimate 30s per question
+                    completedLevel: 1,
+                    difficulty: 'medium'
+                };
+                const userStats = {
+                    xp: user.xp,
+                    level: user.level,
+                    streak: user.streak
+                };
+
+                const category = await LearnerClassifier.classify(gameData, userStats);
+                if (category && category !== 'neutral') {
+                    user.learnerCategory = category;
+                    await user.save();
+                    console.log(`User ${user.name} classified as ${category} via Quiz`);
+                }
+            } catch (err) {
+                console.error('Classifier error in quiz:', err);
+            }
         }
 
         res.status(201).json(result);

@@ -8,6 +8,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { spacing } from '../../theme';
 import Animated, { FadeInDown, BounceIn, ZoomIn } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 interface ChemicalEquation {
     equation: string;
@@ -47,6 +49,12 @@ const ChemistryBalanceGame = () => {
     const [score, setScore] = useState(0);
     const [gameOver, setGameOver] = useState(false);
     const [showFeedback, setShowFeedback] = useState(false);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
+
+    React.useEffect(() => {
+        startTimer();
+        return () => stopTimer();
+    }, []);
 
     const checkAnswer = () => {
         const current = EQUATIONS[currentQuestion];
@@ -64,9 +72,20 @@ const ChemistryBalanceGame = () => {
                 setUserAnswer([1, 1, 1, 1]);
                 setShowFeedback(false);
             } else {
-                const xpReward = Math.floor(score / 3);
+                const finalScore = correct ? score + 25 : score;
+                const xpReward = Math.floor(finalScore / 3);
                 addXP(xpReward, 'Chemistry Balance Game');
+                stopTimer();
                 setGameOver(true);
+
+                saveGameResult({
+                    gameId: 'chemistry_balance',
+                    score: finalScore,
+                    maxScore: 75,
+                    timeTaken: elapsedTime,
+                    difficulty: 'hard',
+                    completedLevel: 1
+                });
             }
         }, 1500);
     };
@@ -83,6 +102,8 @@ const ChemistryBalanceGame = () => {
         setScore(0);
         setGameOver(false);
         setShowFeedback(false);
+        resetGameTimer();
+        startTimer();
     };
 
     // ... (rest of the component)
@@ -121,6 +142,8 @@ const ChemistryBalanceGame = () => {
                             >
                                 <Text variant="displaySmall" style={styles.scoreText}>{score}/75</Text>
                             </LinearGradient>
+                            <Text variant="titleMedium" style={{ marginBottom: 15, color: isDark ? '#F1F5F9' : '#333' }}>Time: {displayTime}</Text>
+
                             <Text variant="bodyLarge" style={styles.resultMessage}>
                                 {score >= 60 ? 'Chemistry Master! 🧪' : score >= 40 ? 'Good Work! ⚗️' : 'Keep Learning! 📚'}
                             </Text>
@@ -171,7 +194,10 @@ const ChemistryBalanceGame = () => {
                         onPress={() => navigation.goBack()}
                     />
                     <Text variant="titleLarge" style={styles.headerTitle}>Balance Equations</Text>
-                    <View style={{ width: 40 }} />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialCommunityIcons name="clock-outline" size={20} color="#fff" style={{ marginRight: 4 }} />
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>{displayTime}</Text>
+                    </View>
                 </View>
 
                 <LinearGradient
@@ -183,9 +209,9 @@ const ChemistryBalanceGame = () => {
                         <Text variant="titleMedium" style={styles.scoreLabel}>Score: {score}</Text>
                     </View>
                     <View style={styles.scoreItem}>
-                        <MaterialCommunityIcons name="flask-outline" size={20} color={isDark ? '#4facfe' : '#4facfe'} />
                         <Text variant="bodyMedium" style={styles.questionLabel}>Question {currentQuestion + 1}/{EQUATIONS.length}</Text>
                     </View>
+
                 </LinearGradient>
 
                 <ScrollView style={styles.gameArea} contentContainerStyle={styles.scrollContent}>

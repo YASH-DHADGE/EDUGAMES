@@ -17,6 +17,8 @@ import GameLayout from '../../components/games/GameLayout';
 import TutorialOverlay from '../../components/games/TutorialOverlay';
 import { useGameProgress } from '../../hooks/useGameProgress';
 import { soundManager } from '../../utils/soundEffects';
+import { useGameTimer } from '../../hooks/useGameTimer';
+import { saveGameResult } from '../../services/gamesService';
 
 const { width, height } = Dimensions.get('window');
 const FALL_SPEED_BASE = 6000; // Slower speed (6s to fall)
@@ -116,6 +118,23 @@ const DigestiveDashScreen = () => {
     const [activeFood, setActiveFood] = useState<FoodItem | null>(null);
     const [key, setKey] = useState(0);
     const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+    const { elapsedTime, startTimer, stopTimer, displayTime, resetTimer: resetGameTimer } = useGameTimer();
+
+    // Check for game over from useGameProgress
+    useEffect(() => {
+        if (isGameOver) {
+            setGameState('gameover');
+            stopTimer();
+            saveGameResult({
+                gameId: 'digestive_dash',
+                score: score,
+                maxScore: 1000, // Theoretical max
+                timeTaken: elapsedTime,
+                difficulty: 'medium',
+                completedLevel: 1
+            });
+        }
+    }, [isGameOver]);
 
     useEffect(() => {
         if (gameState === 'playing' && !activeFood) {
@@ -164,10 +183,13 @@ const DigestiveDashScreen = () => {
         setActiveFood(null);
         setFeedback(null);
         setGameState('playing');
+        resetGameTimer();
+        startTimer();
     };
 
     return (
-        <GameLayout title="Digestive Dash" score={score} lives={lives}>
+        <GameLayout title="Digestive Dash" score={score} lives={lives} timer={displayTime}>
+
             <View style={styles.container}>
                 <LinearGradient
                     colors={['#f8bbd0', '#f48fb1', '#ec407a']}
@@ -228,6 +250,7 @@ const DigestiveDashScreen = () => {
                     <Surface style={styles.gameOverCard}>
                         <Text variant="headlineMedium" style={styles.gameOverTitle}>Indigestion!</Text>
                         <Text variant="titleLarge" style={styles.finalScore}>Score: {score}</Text>
+                        <Text variant="titleMedium" style={{ marginBottom: 20, color: '#333' }}>Time: {displayTime}</Text>
                         <Button mode="contained" onPress={startGame} style={styles.restartBtn}>Digest Again</Button>
                     </Surface>
                 </View>

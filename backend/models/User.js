@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
     approvedAt: { type: Date, default: null },
     rejectionReason: { type: String, default: null },
     language: { type: String, default: 'en' },
+    learnerCategory: { type: String, enum: ['slow', 'fast', 'neutral'], default: 'neutral' },
     selectedClass: { type: Number, min: 6, max: 12, default: null },
 
     teacherId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
@@ -34,6 +35,12 @@ const userSchema = new mongoose.Schema({
     lastActiveDate: { type: Date, default: null },
     streakHistory: [{ date: Date, active: Boolean }],
 
+    // XP History
+    xpHistory: [{
+        date: { type: Date, default: Date.now },
+        xp: { type: Number, default: 0 }
+    }],
+
     // Profile Customization
     avatar: { type: String, default: null },
     themeColor: { type: String, default: '#6366F1' },
@@ -43,7 +50,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) {
-        next();
+        return next();
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

@@ -209,19 +209,20 @@ const styles = StyleSheet.create({
     },
     barContainer: {
         alignItems: 'center',
-        width: 30,
+        width: 45,
         height: '100%',
         justifyContent: 'flex-end',
     },
     bar: {
-        width: 12,
+        width: 32,
         backgroundColor: theme.colors.primary,
-        borderRadius: 6,
-        marginBottom: 4,
+        borderRadius: 8,
+        marginBottom: 6,
     },
     barLabel: {
-        fontSize: 10,
+        fontSize: 12,
         color: '#666',
+        fontWeight: 'bold',
     },
     activityCard: {
         padding: spacing.lg,
