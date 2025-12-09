@@ -857,6 +857,77 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Getting to Know Plants",
+            "subchapters": [
+                {
+                    "name": "Photosynthesis",
+                    "content": {
+                        "explanation": "Plants make their own food by a process called photosynthesis. This process takes place in the leaves of the plant. Leaves need sunlight, water, carbon dioxide from air, and a green pigment called chlorophyll to prepare food. The food prepared is a kind of simple sugar (glucose). Oxygen is released during this process.",
+                        "definitions": [
+                            "Photosynthesis: The process by which green plants make their food using sunlight, water, and carbon dioxide",
+                            "Chlorophyll: The green pigment present in leaves that captures energy from sunlight",
+                            "Stomata: Tiny pores on the surface of leaves for exchange of gases",
+                            "Transpiration: Release of water vapor from leaves"
+                        ],
+                        "keyPoints": [
+                            "Photosynthesis occurs in green leaves",
+                            "Four things needed: Sunlight, Chlorophyll, Carbon dioxide, Water",
+                            "Products formed: Food (Glucose) and Oxygen",
+                            "Roots absorb water from soil",
+                            "Leaves take in carbon dioxide through stomata"
+                        ],
+                        "examples": [
+                            "Green plants like Neem, Mango, Rose carry out photosynthesis",
+                            "Cactus does photosynthesis in its green stem as leaves are reduced to spines"
+                        ],
+                        "diagramExplanation": "A diagram showing a plant with arrows: Sunlight coming down to leaf, Carbon dioxide entering leaf, Water going up from roots to leaf, Oxygen coming out of leaf, and Food being stored.",
+                        "formula": "Carbon dioxide + Water --(Sunlight/Chlorophyll)--> Food (Glucose) + Oxygen",
+                        "activity": "Activity: Test for Starch - Take a leaf, boil it in alcohol to remove chlorophyll. Add iodine solution. Blue-black color shows presence of starch (stored food).",
+                        "misconceptions": [
+                            "Misconception: Plants sleep at night so they don't breathe. Reality: Plants respire (breathe) 24/7 but only do photosynthesis during day",
+                            "Misconception: Plants get food from soil. Reality: Plants get water/minerals from soil but MAKE food in leaves"
+                        ],
+                        "summary": "Photosynthesis is the food-making process in plants using sunlight, water, and air. Leaves are the 'kitchen' of the plant. Chlorophyll helps capture sunlight. Oxygen is given out which is essential for animals."
+                    },
+                    "quiz": {
+                        "mcq": [
+                            {
+                                "q": "Which gas is used by plants during photosynthesis?",
+                                "options": [
+                                    "Oxygen",
+                                    "Carbon Dioxide",
+                                    "Nitrogen",
+                                    "Hydrogen"
+                                ],
+                                "answer": "Carbon Dioxide"
+                            },
+                            {
+                                "q": "The food factory of the plant is:",
+                                "options": [
+                                    "Root",
+                                    "Stem",
+                                    "Leaf",
+                                    "Flower"
+                                ],
+                                "answer": "Leaf"
+                            }
+                        ],
+                        "short": [
+                            "What is photosynthesis?",
+                            "Name the green pigment in leaves."
+                        ],
+                        "long": [
+                            "Explain the process of photosynthesis with a diagram.",
+                            "How would you test a leaf for starch?"
+                        ],
+                        "hots": [
+                            "Can a plant survive without leaves? Why or why not?"
+                        ]
+                    }
+                }
+            ]
         }
     ]
 }

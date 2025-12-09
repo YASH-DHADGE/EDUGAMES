@@ -33,6 +33,7 @@ app.use('/api/lessons', require('./routes/lessons'));
 app.use('/api/quizzes', require('./routes/quizzes'));
 app.use('/api/games', require('./routes/games'));
 app.use('/api/science', require('./routes/science'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/sync', require('./routes/sync'));
 app.use('/api/xp', require('./routes/xpRoutes'));
 app.use('/api/streak', require('./routes/streakRoutes'));

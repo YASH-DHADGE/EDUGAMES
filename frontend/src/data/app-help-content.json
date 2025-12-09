@@ -1,0 +1,40 @@
+{
+    "helpTopics": [
+        {
+            "topic": "How to earn points",
+            "content": "You can earn points (XP) by completing chapters, taking quizzes, and playing games. Each correct answer in a quiz gives you XP. Daily logins request also maintain your streak which gives bonus points."
+        },
+        {
+            "topic": "How to use offline mode",
+            "content": "The app automatically works offline. You can read science chapters, view diagrams, and take quizzes without internet. Your progress (XP and completed lessons) will be saved locally and synced when you connect to the internet again."
+        },
+        {
+            "topic": "Teacher Dashboard",
+            "content": "Teachers can view student progress, assign homework, and see analytics in the Teacher Dashboard. To access it, you must be logged in with a Teacher account."
+        },
+        {
+            "topic": "Change Avatar",
+            "content": "To change your avatar: 1. Go to the 'Profile' tab (usually the last icon on the bottom menu). 2. Tap on your current avatar image. 3. Select a new avatar from the list."
+        },
+        {
+            "topic": "Syncing Data",
+            "content": "Data syncs automatically when you open the app with an internet connection. If you see a 'Sync Pending' icon, you can pull down on the home screen to force a sync."
+        },
+        {
+            "topic": "App Navigation / Where to find things",
+            "content": "Here is how to find main features: \n- **Home**: See your classes, recent progress, and 'AI Tutor'.\n- **Learn (Book Icon)**: Access all your Science chapters ('Food', 'Plants', 'Body Movements', etc.).\n- **Games (Controller Icon)**: Play educational games like 'Cell Command' or 'Word Search'.\n- **Profile (Person Icon)**: Check your Level, Streak, Badges, and change settings."
+        },
+        {
+            "topic": "Syllabus / Content",
+            "content": "The app covers Class 6 Science syllabus including: \n1. Food & Sources\n2. Components of Food\n3. Fibre to Fabric\n4. Sorting Materials\n5. Getting to Know Plants (Photosynthesis, Parts of Plants)\n6. Body Movements\n7. Living Organisms.\nYou can find all these in the 'Learn' tab."
+        },
+        {
+            "topic": "Leaderboard",
+            "content": "Check the Leaderboard to see top students. It is usually found on the Home screen or within the Profile section. Compete to get the highest XP!"
+        },
+        {
+            "topic": "How to play games",
+            "content": "Go to the 'Games' tab. Select a game like 'Nutrient Sort' or 'Plant Parts'. Read the instructions at the start of each game. Earning high scores in games boosts your XP."
+        }
+    ]
+}

@@ -136,6 +136,14 @@ const HomeScreen = ({ navigation }: any) => {
             gradient: ['#8E2DE2', '#4A00E0'], // Electric Violet
             onPress: () => navigation.navigate('Classroom'),
         },
+        {
+            id: '9',
+            title: 'AI Tutor',
+            icon: 'robot-outline',
+            color: '#B2EBF2',
+            gradient: ['#00ACC1', '#0097A7'], // Cyan/Teal
+            onPress: () => navigation.navigate('Chatbot'),
+        },
     ];
 
     const getSimIcon = (subject: string) => {
