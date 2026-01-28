@@ -288,11 +288,6 @@ npx expo-doctor
 - ✅ **Dark Mode**: Full dark theme support
 - ✅ **Responsive Bento Grid**: 2-column mobile layout for Learn & Games
 
----
-
-## 🐛 Known Issues
-
-- Expo Doctor: 16/17 checks passed (1 minor issue - non-blocking)
 
 ---
 
