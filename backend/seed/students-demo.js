@@ -1,11 +1,6 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const User = require('./models/User');
-const GameResult = require('./models/GameResult');
-const LearnerClassifier = require('./services/learnerClassifier');
-const dotenv = require('dotenv');
-
-dotenv.config();
+const User = require('../models/User');
+const GameResult = require('../models/GameResult');
+const LearnerClassifier = require('../services/learnerClassifier');
 
 const STUDENT_NAMES = [
     'Aarav Sharma', 'Aisha Patel', 'Arjun Kumar', 'Diya Singh', 'Kabir Verma',
@@ -27,34 +22,27 @@ function getRandomElement(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
 
-async function createDemoStudents() {
+const seedDemoStudents = async () => {
     try {
-        console.log('🔗 Connecting to MongoDB...');
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('✅ Connected!\n');
-
-        // Wait for classifier
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait for classifier (logic from original file)
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Get teacher ID
         const teacher = await User.findOne({ role: 'teacher' });
         if (!teacher) {
-            console.log('❌ No teacher found. Please create a teacher first.');
-            process.exit(1);
+            console.log('      ⚠️ No teacher found. Skipping demo student creation.');
+            return;
         }
 
-        console.log(`📚 Creating 30 demo students for teacher: ${teacher.name}\n`);
+        console.log(`🤖 Creating Demo Students for teacher: ${teacher.name}...`);
 
-        // Clear existing demo students (optional)
+        // Clear existing demo students
         const existingDemoCount = await User.countDocuments({
             role: 'student',
             email: { $regex: /^demo\.student/ }
         });
 
         if (existingDemoCount > 0) {
-            console.log(`⚠️  Found ${existingDemoCount} existing demo students`);
-            console.log('🗑️  Removing old demo data...');
-
             const demoStudents = await User.find({
                 role: 'student',
                 email: { $regex: /^demo\.student/ }
@@ -68,8 +56,7 @@ async function createDemoStudents() {
                 role: 'student',
                 email: { $regex: /^demo\.student/ }
             });
-
-            console.log('✅ Cleaned up old demo data\n');
+            console.log('      🗑️  Removed old demo data');
         }
 
         let fastCount = 0;
@@ -82,18 +69,12 @@ async function createDemoStudents() {
             const email = `demo.student${i + 1}@example.com`;
 
             // Determine performance tier (realistic distribution)
-            // 30% Fast, 50% Neutral, 20% Slow
             let performanceTier;
             const rand = Math.random();
-            if (rand < 0.2) {
-                performanceTier = 'slow';
-            } else if (rand < 0.7) {
-                performanceTier = 'neutral';
-            } else {
-                performanceTier = 'fast';
-            }
+            if (rand < 0.2) performanceTier = 'slow';
+            else if (rand < 0.7) performanceTier = 'neutral';
+            else performanceTier = 'fast';
 
-            // Generate stats based on tier
             let xp, level, streak;
 
             if (performanceTier === 'fast') {
@@ -113,7 +94,6 @@ async function createDemoStudents() {
                 slowCount++;
             }
 
-            // Create student
             const student = await User.create({
                 name: studentName,
                 email: email,
@@ -125,10 +105,8 @@ async function createDemoStudents() {
                 xp: xp,
                 level: level,
                 streak: streak,
-                learnerCategory: 'neutral' // Will be updated after games
+                learnerCategory: 'neutral'
             });
-
-            console.log(`👤 Created: ${studentName} (${performanceTier.toUpperCase()}) - XP: ${xp}, Level: ${level}`);
 
             // Create 3-7 game results per student
             const gameCount = getRandomInt(3, 7);
@@ -136,10 +114,8 @@ async function createDemoStudents() {
             for (let j = 0; j < gameCount; j++) {
                 const gameType = getRandomElement(GAME_TYPES);
                 const difficulty = getRandomElement(DIFFICULTIES);
-
                 let score, maxScore, accuracy;
 
-                // Generate scores based on performance tier
                 if (performanceTier === 'fast') {
                     maxScore = 100;
                     score = getRandomInt(75, 100);
@@ -155,8 +131,6 @@ async function createDemoStudents() {
                 }
 
                 const duration = getRandomInt(60, 600);
-
-                // Calculate proficiency
                 let proficiency = 'Not Rated';
                 const scorePercent = (score / maxScore) * 100;
                 if (scorePercent >= 85) proficiency = 'Advanced';
@@ -175,13 +149,12 @@ async function createDemoStudents() {
                     completedLevel: 1,
                     proficiency: proficiency,
                     delta: scorePercent,
-                    createdAt: new Date(Date.now() - getRandomInt(0, 30) * 24 * 60 * 60 * 1000) // Random date in last 30 days
+                    createdAt: new Date(Date.now() - getRandomInt(0, 30) * 24 * 60 * 60 * 1000)
                 });
             }
 
-            // Classify student based on their game results
+            // Classify student
             const latestGame = await GameResult.findOne({ userId: student._id }).sort({ createdAt: -1 });
-
             if (latestGame) {
                 const gameData = {
                     score: latestGame.score,
@@ -191,54 +164,24 @@ async function createDemoStudents() {
                     difficulty: latestGame.difficulty,
                     completedLevel: 1
                 };
+                const userStats = { xp: student.xp, level: student.level, streak: student.streak };
 
-                const userStats = {
-                    xp: student.xp,
-                    level: student.level,
-                    streak: student.streak
-                };
-
-                const classification = await LearnerClassifier.classify(gameData, userStats);
-                student.learnerCategory = classification;
-                await student.save();
-
-                console.log(`   ✓ Classification: ${classification.toUpperCase()}\n`);
+                try {
+                    const classification = await LearnerClassifier.classify(gameData, userStats);
+                    student.learnerCategory = classification;
+                    await student.save();
+                } catch (e) {
+                    // Ignore classification error if logic differs or service fails
+                }
             }
         }
 
-        console.log('\n' + '='.repeat(60));
-        console.log('📊 DEMO DATA SUMMARY');
-        console.log('='.repeat(60));
-        console.log(`Total Students Created: 30`);
-        console.log(`  🟢 Fast Learners: ~${fastCount}`);
-        console.log(`  ⚪ Neutral: ~${neutralCount}`);
-        console.log(`  🟠 Slow Learners: ~${slowCount}`);
-        console.log('='.repeat(60));
-
-        // Verify final classifications
-        const actualFast = await User.countDocuments({ role: 'student', learnerCategory: 'fast', email: { $regex: /^demo\.student/ } });
-        const actualNeutral = await User.countDocuments({ role: 'student', learnerCategory: 'neutral', email: { $regex: /^demo\.student/ } });
-        const actualSlow = await User.countDocuments({ role: 'student', learnerCategory: 'slow', email: { $regex: /^demo\.student/ } });
-
-        console.log('\n📈 ACTUAL CLASSIFICATIONS:');
-        console.log(`  🟢 Fast: ${actualFast}`);
-        console.log(`  ⚪ Neutral: ${actualNeutral}`);
-        console.log(`  🟠 Slow: ${actualSlow}`);
-        console.log('='.repeat(60));
-
-        console.log('\n✅ Demo data created successfully!');
-        console.log('🔑 Login credentials for all demo students:');
-        console.log('   Email: demo.student[1-30]@example.com');
-        console.log('   Password: demo123\n');
-
-        mongoose.disconnect();
-        process.exit(0);
+        console.log(`      ✓ Created ${fastCount + neutralCount + slowCount} demo students (Fast: ${fastCount}, Neutral: ${neutralCount}, Slow: ${slowCount})`);
 
     } catch (error) {
-        console.error('❌ Error:', error);
-        mongoose.disconnect();
-        process.exit(1);
+        console.error('      ❌ Error seeding demo students:', error.message);
+        throw error;
     }
-}
+};
 
-createDemoStudents();
+module.exports = seedDemoStudents;

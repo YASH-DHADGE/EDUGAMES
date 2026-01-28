@@ -2,6 +2,8 @@ const User = require('../models/User');
 const TeacherQuiz = require('../models/TeacherQuiz');
 const Chapter = require('../models/Chapter');
 const TeacherChapter = require('../models/TeacherChapter');
+const Class = require('../models/Class');
+const Subject = require('../models/Subject');
 
 // @desc    Get teacher stats
 // @route   GET /api/teacher/stats
@@ -427,6 +429,64 @@ const createStudent = async (req, res) => {
     }
 };
 
+// @desc    Get all syllabus chapters for a class
+// @route   GET /api/teacher/chapters
+// @access  Private/Teacher
+const getAllChapters = async (req, res) => {
+    try {
+        const classNumber = parseInt(req.query.class);
+        if (!classNumber) {
+            return res.status(400).json({ message: 'Class number is required' });
+        }
+
+        const classDoc = await Class.findOne({ classNumber });
+        if (!classDoc) {
+            return res.status(404).json({ message: 'Class not found' });
+        }
+
+        const subjects = await Subject.find({ classId: classDoc._id });
+        const subjectIds = subjects.map(s => s._id);
+
+        const chapters = await Chapter.find({ subjectId: { $in: subjectIds } })
+            .populate('subjectId', 'name');
+
+        // Transform for frontend
+        const formattedChapters = chapters.map(ch => ({
+            _id: ch._id,
+            title: ch.name,
+            subject: ch.subjectId.name,
+            index: ch.index
+        }));
+
+        res.json(formattedChapters);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get students by class
+// @route   GET /api/teacher/students/class/:classNumber
+// @access  Private/Teacher
+const getStudentsByClass = async (req, res) => {
+    try {
+        const classNumber = parseInt(req.params.classNumber);
+        if (!classNumber) {
+            return res.status(400).json({ message: 'Invalid class number' });
+        }
+
+        const students = await User.find({
+            role: 'student',
+            selectedClass: classNumber
+        })
+            .select('_id name email selectedClass')
+            .sort({ name: 1 });
+
+        res.json(students);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTeacherStats,
     createQuiz,
@@ -439,5 +499,7 @@ module.exports = {
     createStudent,
     deleteQuiz,
     deleteChapter,
-    updateQuiz
+    updateQuiz,
+    getAllChapters, // New
+    getStudentsByClass // New
 };

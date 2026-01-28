@@ -1,80 +1,129 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import { Text, Portal, Modal, Button } from 'react-native-paper';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withSequence, withDelay, withTiming, Easing } from 'react-native-reanimated';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { Text, Portal } from 'react-native-paper';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withSequence,
+    withDelay,
+    withTiming,
+    withRepeat,
+    ZoomIn,
+    FadeOut
+} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import ConfettiAnimation from '../ConfettiAnimation';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const LevelUpPopup = () => {
     const { showLevelUp, closeLevelUp, level } = useAuth();
-    const scale = useSharedValue(0);
-    const opacity = useSharedValue(0);
+    const [showConfetti, setShowConfetti] = useState(false);
 
     useEffect(() => {
         if (showLevelUp) {
-            scale.value = withSequence(
-                withSpring(1.2),
-                withSpring(1)
-            );
-            opacity.value = withTiming(1, { duration: 500 });
-
-            const timer = setTimeout(() => {
-                handleClose();
-            }, 4000);
-
+            // Trigger confetti slightly after popup appears
+            const timer = setTimeout(() => setShowConfetti(true), 300);
             return () => clearTimeout(timer);
         } else {
-            scale.value = 0;
-            opacity.value = 0;
+            setShowConfetti(false);
         }
     }, [showLevelUp]);
 
     const handleClose = () => {
-        opacity.value = withTiming(0, { duration: 300 });
-        scale.value = withTiming(0, { duration: 300 }, () => {
-            // runOnJS(closeLevelUp)(); // If needed, but closeLevelUp is state update
-        });
-        setTimeout(closeLevelUp, 300);
+        setShowConfetti(false);
+        closeLevelUp();
     };
-
-    const animatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: scale.value }],
-            opacity: opacity.value,
-        };
-    });
 
     if (!showLevelUp) return null;
 
     return (
         <Portal>
             <View style={styles.overlay} pointerEvents="box-none">
-                <Animated.View style={[styles.container, animatedStyle]}>
+                {/* Backdrop Tap to Close */}
+                <TouchableOpacity
+                    style={StyleSheet.absoluteFill}
+                    activeOpacity={1}
+                    onPress={handleClose}
+                >
+                    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)' }} />
+                </TouchableOpacity>
+
+                {/* Confetti (Behind or Over?) - Over looks best for celebration */}
+                {showConfetti && <ConfettiAnimation isVisible={true} onComplete={() => setShowConfetti(false)} />}
+
+                <Animated.View
+                    entering={ZoomIn.springify().damping(12)}
+                    exiting={FadeOut.duration(200)}
+                    style={styles.container}
+                    pointerEvents="box-none"
+                >
                     <LinearGradient
-                        colors={['#6A5AE0', '#8B7AFF']}
+                        colors={['#FFD700', '#F59E0B', '#B45309']} // Premium Gold Gradient
                         style={styles.gradient}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                     >
-                        <View style={styles.iconContainer}>
-                            <MaterialCommunityIcons name="trophy" size={60} color="#FFD700" />
-                        </View>
+                        {/* Shimmer/Glow Effect Overlay */}
+                        <LinearGradient
+                            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0)']}
+                            style={StyleSheet.absoluteFill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0.5 }}
+                        />
+
+                        {/* Animated Trophy */}
+                        <TrophyIcon />
 
                         <Text style={styles.title}>LEVEL UP!</Text>
 
                         <View style={styles.levelBadge}>
-                            <Text style={styles.levelText}>{level}</Text>
+                            <LinearGradient
+                                colors={['#fff', '#f0f9ff']}
+                                style={styles.badgeInner}
+                            >
+                                <Text style={styles.levelText}>{level}</Text>
+                                <Text style={styles.levelLabel}>LEVEL</Text>
+                            </LinearGradient>
                         </View>
 
-                        <Text style={styles.subtitle}>You've reached Level {level}!</Text>
-                        <Text style={styles.description}>Keep learning to unlock more rewards.</Text>
+                        <Text style={styles.subtitle}>Outstanding!</Text>
+                        <Text style={styles.description}>You've unlocked new content.</Text>
+
+                        <TouchableOpacity style={styles.button} onPress={handleClose} activeOpacity={0.8}>
+                            <Text style={styles.buttonText}>CONTINUE</Text>
+                        </TouchableOpacity>
                     </LinearGradient>
                 </Animated.View>
             </View>
         </Portal>
+    );
+};
+
+const TrophyIcon = () => {
+    const scale = useSharedValue(0);
+    const rotate = useSharedValue(0);
+
+    useEffect(() => {
+        scale.value = withSequence(withSpring(1.2), withSpring(1));
+        rotate.value = withRepeat(
+            withSequence(withTiming(-10, { duration: 1000 }), withTiming(10, { duration: 1000 })),
+            -1,
+            true
+        );
+    }, []);
+
+    const style = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }, { rotate: `${rotate.value}deg` }]
+    }));
+
+    return (
+        <Animated.View style={[styles.iconContainer, style]}>
+            <MaterialCommunityIcons name="trophy" size={80} color="#FFF" style={{ textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 10 }} />
+        </Animated.View>
     );
 };
 
@@ -83,67 +132,75 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        zIndex: 1000,
+        zIndex: 2000,
     },
     container: {
         width: width * 0.85,
-        maxWidth: 350,
-        borderRadius: 30,
+        maxWidth: 360,
+        borderRadius: 40,
         overflow: 'hidden',
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
+        elevation: 20,
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 30,
+        backgroundColor: '#fff',
     },
     gradient: {
-        padding: 30,
+        padding: 40,
         alignItems: 'center',
         justifyContent: 'center',
     },
     iconContainer: {
-        marginBottom: 20,
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 20,
+        marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
     },
     title: {
-        fontSize: 32,
+        fontSize: 36,
         fontWeight: '900',
-        color: '#fff',
-        marginBottom: 20,
+        color: '#FFF',
+        marginBottom: 24,
         letterSpacing: 2,
         textShadowColor: 'rgba(0,0,0,0.2)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
     },
     levelBadge: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#fff',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        padding: 6,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+        marginBottom: 24,
+    },
+    badgeInner: {
+        flex: 1,
+        borderRadius: 60,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
-        borderWidth: 6,
-        borderColor: 'rgba(255,255,255,0.3)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 5,
+        borderWidth: 4,
+        borderColor: '#B45309',
     },
     levelText: {
         fontSize: 48,
         fontWeight: '900',
-        color: '#6A5AE0',
+        color: '#B45309',
+        height: 56, // Fix alignment
+        lineHeight: 56,
+    },
+    levelLabel: {
+        fontSize: 12,
+        fontWeight: '800',
+        color: '#D97706',
+        letterSpacing: 1,
     },
     subtitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#fff',
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#FFF',
         marginBottom: 8,
         textAlign: 'center',
     },
@@ -151,6 +208,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: 'rgba(255,255,255,0.9)',
         textAlign: 'center',
+        marginBottom: 32,
+        fontWeight: '500',
+    },
+    button: {
+        backgroundColor: '#FFF',
+        paddingVertical: 16,
+        paddingHorizontal: 48,
+        borderRadius: 30,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    buttonText: {
+        color: '#B45309',
+        fontSize: 16,
+        fontWeight: '900',
+        letterSpacing: 1,
     },
 });
 

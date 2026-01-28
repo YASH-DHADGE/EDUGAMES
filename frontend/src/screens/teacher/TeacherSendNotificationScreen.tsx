@@ -9,12 +9,14 @@ import GradientBackground from '../../components/ui/GradientBackground';
 import CustomButton from '../../components/ui/CustomButton';
 import { spacing, borderRadius, theme } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const TeacherSendNotificationScreen = () => {
     const navigation = useNavigation();
     const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Form state
     const [selectedStudent, setSelectedStudent] = useState('');
@@ -55,9 +57,7 @@ const TeacherSendNotificationScreen = () => {
                 data: {}
             });
 
-            Alert.alert('Success', 'Notification Created Successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            setShowSuccessModal(true);
         } catch (error: any) {
             console.error('Failed to send notification:', error);
             Alert.alert('Error', error.response?.data?.message || 'Failed to send notification');
@@ -180,6 +180,16 @@ const TeacherSendNotificationScreen = () => {
                     </Surface>
                 </ScrollView>
             </KeyboardAvoidingView>
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Notification Sent!"
+                message="Your notification has been sent successfully."
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    navigation.goBack();
+                }}
+                buttonText="Done"
+            />
         </GradientBackground>
     );
 };

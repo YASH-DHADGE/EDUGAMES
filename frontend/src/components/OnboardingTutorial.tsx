@@ -1,12 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Modal, ScrollView } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import React, { useState } from 'react';
+import { View, StyleSheet, Modal, TouchableOpacity, Dimensions } from 'react-native';
+import { Text } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import CustomButton from './ui/CustomButton';
-import CustomCard from './ui/CustomCard';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { spacing } from '../theme';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, {
+    FadeIn,
+    FadeOut,
+    ZoomIn,
+    SlideInRight,
+    SlideOutLeft,
+    useSharedValue,
+    useAnimatedStyle,
+    withSpring,
+    withRepeat,
+    withSequence,
+    withTiming
+} from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+
+const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
     icon: string;
@@ -16,19 +29,19 @@ interface OnboardingSlide {
 
 const slides: OnboardingSlide[] = [
     {
-        icon: 'book-open-page-variant',
+        icon: 'book-open-variant',
         title: 'Learn at Your Pace',
-        description: 'Explore subjects like Math and Science with interactive lessons designed for rural learners.',
+        description: 'Master Math & Science with interactive lessons tailored just for you.',
     },
     {
         icon: 'gamepad-variant',
-        title: 'Play & Learn',
-        description: 'Engage with fun educational games that make learning enjoyable and memorable.',
+        title: 'Play to Learn',
+        description: 'Turn study time into game time. Earn XP, unlock levels, and have fun!',
     },
     {
-        icon: 'trophy',
-        title: 'Track Your Progress',
-        description: 'Earn XP, level up, and maintain streaks to stay motivated on your learning journey.',
+        icon: 'trophy-award',
+        title: 'Earn Rewards',
+        description: 'Build your streak, climb the leaderboard, and become a top student.',
     },
 ];
 
@@ -37,7 +50,6 @@ interface OnboardingTutorialProps {
 }
 
 const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({ onComplete }) => {
-    const theme = useTheme();
     const [currentSlide, setCurrentSlide] = useState(0);
 
     const handleNext = () => {
@@ -48,146 +60,246 @@ const OnboardingTutorial: React.FC<OnboardingTutorialProps> = ({ onComplete }) =
         }
     };
 
-    const handleSkip = () => {
-        handleComplete();
-    };
-
     const handleComplete = async () => {
         await AsyncStorage.setItem('onboardingCompleted', 'true');
         onComplete();
     };
 
-    const slide = slides[currentSlide];
-
     return (
-        <Modal visible={true} animationType="fade" transparent={true}>
+        <Modal visible={true} transparent animationType="fade">
             <View style={styles.overlay}>
-                <Animated.View entering={FadeIn} exiting={FadeOut} style={styles.container}>
-                    <CustomCard elevation={5} style={styles.card}>
-                        <ScrollView contentContainerStyle={styles.scrollContent}>
-                            <View style={styles.iconContainer}>
-                                <MaterialCommunityIcons
-                                    name={slide.icon as any}
-                                    size={80}
-                                    color={theme.colors.primary}
+                {/* Backdrop Blur (if supported, else dark overlay) */}
+                <TouchableOpacity
+                    style={StyleSheet.absoluteFill}
+                    activeOpacity={1}
+                    onPress={handleComplete}
+                />
+
+                <Animated.View
+                    entering={ZoomIn.springify().damping(12)}
+                    exiting={FadeOut}
+                    style={styles.container}
+                >
+                    <LinearGradient
+                        colors={['#2E1065', '#4C1D95', '#5B21B6']} // Deep Premium Purple
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.gradientCard}
+                    >
+                        {/* Close Button */}
+                        <TouchableOpacity style={styles.closeBtn} onPress={handleComplete}>
+                            <MaterialCommunityIcons name="close" size={20} color="rgba(255,255,255,0.6)" />
+                        </TouchableOpacity>
+
+                        {/* Animated Icon */}
+                        <View style={styles.iconContainer}>
+                            <FloatingIcon icon={slides[currentSlide].icon} />
+                        </View>
+
+                        {/* Text Content with Slide Animation */}
+                        <Animated.View
+                            key={currentSlide}
+                            entering={SlideInRight.springify().damping(15)}
+                            exiting={SlideOutLeft.duration(200)}
+                            style={styles.textContainer}
+                        >
+                            <Text style={styles.title}>{slides[currentSlide].title}</Text>
+                            <Text style={styles.description}>{slides[currentSlide].description}</Text>
+                        </Animated.View>
+
+                        {/* Progress Dots */}
+                        <View style={styles.dotsContainer}>
+                            {slides.map((_, i) => (
+                                <Animated.View
+                                    key={i}
+                                    style={[
+                                        styles.dot,
+                                        i === currentSlide ? styles.dotActive : styles.dotInactive
+                                    ]}
                                 />
-                            </View>
-                            <Text variant="headlineMedium" style={styles.title}>
-                                {slide.title}
-                            </Text>
-                            <Text variant="bodyLarge" style={styles.description}>
-                                {slide.description}
-                            </Text>
+                            ))}
+                        </View>
 
-                            {/* Progress Indicators */}
-                            <View style={styles.indicatorContainer}>
-                                {slides.map((_, index) => (
-                                    <View
-                                        key={index}
-                                        style={[
-                                            styles.indicator,
-                                            {
-                                                backgroundColor:
-                                                    index === currentSlide
-                                                        ? theme.colors.primary
-                                                        : 'rgba(0, 0, 0, 0.2)',
-                                            },
-                                        ]}
-                                    />
-                                ))}
-                            </View>
+                        {/* Action Button */}
+                        <TouchableOpacity
+                            style={styles.actionBtn}
+                            onPress={handleNext}
+                            activeOpacity={0.8}
+                        >
+                            <LinearGradient
+                                colors={['#F472B6', '#DB2777']} // Pink/Rose pop
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.btnGradient}
+                            >
+                                <Text style={styles.btnText}>
+                                    {currentSlide === slides.length - 1 ? "Get Started" : "Next"}
+                                </Text>
+                                <MaterialCommunityIcons
+                                    name={currentSlide === slides.length - 1 ? "rocket-launch" : "arrow-right"}
+                                    size={20}
+                                    color="#fff"
+                                />
+                            </LinearGradient>
+                        </TouchableOpacity>
 
-                            {/* Buttons */}
-                            <View style={styles.buttonContainer}>
-                                {currentSlide < slides.length - 1 ? (
-                                    <>
-                                        <CustomButton
-                                            variant="text"
-                                            size="medium"
-                                            onPress={handleSkip}
-                                            style={styles.skipButton}
-                                        >
-                                            Skip
-                                        </CustomButton>
-                                        <CustomButton
-                                            variant="primary"
-                                            size="medium"
-                                            onPress={handleNext}
-                                            icon="arrow-right"
-                                            iconPosition="right"
-                                        >
-                                            Next
-                                        </CustomButton>
-                                    </>
-                                ) : (
-                                    <CustomButton
-                                        variant="primary"
-                                        size="large"
-                                        onPress={handleComplete}
-                                        fullWidth
-                                        icon="check"
-                                    >
-                                        Get Started
-                                    </CustomButton>
-                                )}
-                            </View>
-                        </ScrollView>
-                    </CustomCard>
+                        {/* Skip Button */}
+                        {currentSlide < slides.length - 1 && (
+                            <TouchableOpacity onPress={handleComplete} style={styles.skipBtn}>
+                                <Text style={styles.skipText}>Skip</Text>
+                            </TouchableOpacity>
+                        )}
+                    </LinearGradient>
                 </Animated.View>
             </View>
         </Modal>
     );
 };
 
+// Sub-component for Icon Animation
+const FloatingIcon = ({ icon }: { icon: string }) => {
+    const y = useSharedValue(0);
+
+    React.useEffect(() => {
+        y.value = withRepeat(
+            withSequence(
+                withTiming(-10, { duration: 1500 }),
+                withTiming(0, { duration: 1500 })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const style = useAnimatedStyle(() => ({
+        transform: [{ translateY: y.value }]
+    }));
+
+    return (
+        <Animated.View style={style}>
+            <LinearGradient
+                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']}
+                style={styles.iconCircle}
+            >
+                <MaterialCommunityIcons name={icon as any} size={48} color="#fff" />
+            </LinearGradient>
+        </Animated.View>
+    );
+};
+
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: spacing.xl,
+        padding: 20,
     },
     container: {
         width: '100%',
-        maxWidth: 500,
+        maxWidth: 380,
+        borderRadius: 32,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 10,
     },
-    card: {
-        padding: spacing.xl,
-    },
-    scrollContent: {
+    gradientCard: {
+        padding: 32,
+        borderRadius: 32,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    closeBtn: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
     iconContainer: {
-        marginBottom: spacing.xl,
+        height: 120,
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+    iconCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    textContainer: {
+        alignItems: 'center',
+        height: 100, // Fixed height to prevent jump
     },
     title: {
-        fontWeight: '700',
+        fontSize: 28,
+        fontWeight: '800',
+        color: '#fff',
+        marginBottom: 12,
         textAlign: 'center',
-        marginBottom: spacing.md,
+        letterSpacing: 0.5,
     },
     description: {
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.8)',
         textAlign: 'center',
-        opacity: 0.8,
-        marginBottom: spacing.xxxl,
+        lineHeight: 24,
     },
-    indicatorContainer: {
+    dotsContainer: {
         flexDirection: 'row',
-        gap: spacing.sm,
-        marginBottom: spacing.xl,
+        gap: 8,
+        marginBottom: 32,
+        marginTop: 10,
     },
-    indicator: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+    dot: {
+        height: 6,
+        borderRadius: 3,
     },
-    buttonContainer: {
-        flexDirection: 'row',
-        gap: spacing.md,
+    dotActive: {
+        width: 24,
+        backgroundColor: '#F472B6',
+    },
+    dotInactive: {
+        width: 6,
+        backgroundColor: 'rgba(255,255,255,0.3)',
+    },
+    actionBtn: {
         width: '100%',
-        justifyContent: 'space-between',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 16,
+        shadowColor: '#F472B6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    skipButton: {
-        flex: 1,
+    btnGradient: {
+        paddingVertical: 16,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 10,
+    },
+    btnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    skipBtn: {
+        padding: 8,
+    },
+    skipText: {
+        color: 'rgba(255,255,255,0.5)',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

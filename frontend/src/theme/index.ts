@@ -5,11 +5,11 @@ import { getResponsiveFontSize, getResponsiveSpacing } from '../utils/responsive
 
 // 1.1 Color Palette
 const colors = {
-  // Primary - Purple
-  primary: '#A855F7', // primary-500
-  primaryLight: '#C084FC', // primary-400
-  primaryDark: '#7E22CE', // primary-700
-  primaryContainer: '#F3E8FF', // primary-100
+  // Primary - Vibrant Purple (User Requested)
+  primary: '#7C3AED', // Violet 600
+  primaryLight: '#A78BFA', // Violet 400
+  primaryDark: '#5B21B6', // Violet 800
+  primaryContainer: '#F3E8FF', // Violet 100
   onPrimary: '#FFFFFF',
 
   // Semantic
@@ -18,24 +18,24 @@ const colors = {
   error: '#EF4444',
   info: '#3B82F6',
 
-  // Neutrals
-  background: '#FAFAFA', // gray-50
-  surface: '#FFFFFF',
-  surfaceVariant: '#F5F5F5', // gray-100
-  outline: '#D4D4D4', // gray-300
-  outlineVariant: '#E5E5E5', // gray-200
+  // Neutrals 
+  background: '#F8FAFC', // Slate 50 - Clean light background
+  surface: '#FFFFFF', // Pure White
+  surfaceVariant: '#F1F5F9', // Slate 100
+  outline: '#CBD5E1', // Slate 300
+  outlineVariant: '#E2E8F0', // Slate 200
 
   // Text
-  onBackground: '#171717', // gray-900
-  onSurface: '#171717', // gray-900
-  onSurfaceVariant: '#525252', // gray-600
-  textSecondary: '#525252', // gray-600
-  textTertiary: '#A3A3A3', // gray-400
+  onBackground: '#0F172A', // Slate 900
+  onSurface: '#0F172A', // Slate 900
+  onSurfaceVariant: '#334155', // Slate 700
+  textSecondary: '#64748B', // Slate 500
+  textTertiary: '#94A3B8', // Slate 400
 
   // Special
   shadow: '#000000',
   scrim: '#000000',
-  overlay: 'rgba(0, 0, 0, 0.5)',
+  overlay: 'rgba(15, 23, 42, 0.5)',
 };
 
 // 1.2 Typography Scale
@@ -154,56 +154,70 @@ export const spacing = {
   max: 64,  // space-16
 };
 
-// 1.4 Elevation (Shadows)
+// 1.5 Border Radius (Modern: More Rounded)
+export const borderRadius = {
+  none: 0,
+  sm: 8,
+  base: 16, // Modern "Card" look
+  md: 20,
+  lg: 24,
+  xl: 32,
+  xxl: 40,
+  '2xl': 48,
+  '3xl': 60,
+  full: 9999,
+};
+
+// 1.4 Elevation (Modern Colored Shadows)
 export const shadows = {
   xs: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sm: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   base: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 4,
   },
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 6,
   },
   lg: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 10,
   },
   xl: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
+    shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.2,
     shadowRadius: 32,
     elevation: 15,
   },
   '2xl': {
-    shadowColor: '#5B21B6', // Deep purple shadow
-    shadowOffset: { width: 0, height: 20 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 25 },
     shadowOpacity: 0.25,
-    shadowRadius: 48,
-    elevation: 20,
+    shadowRadius: 40,
+    elevation: 25,
   },
   '3xl': {
     shadowColor: '#000',
@@ -212,20 +226,6 @@ export const shadows = {
     shadowRadius: 60,
     elevation: 30,
   },
-};
-
-// 1.5 Border Radius
-export const borderRadius = {
-  none: 0,
-  sm: 6,
-  base: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
-  '2xl': 24,
-  '3xl': 32,
-  full: 9999,
 };
 
 // 1.6 Animation Timings
@@ -239,7 +239,7 @@ export const animation = {
 
 // Gradient Presets
 export const gradients = {
-  primary: ['#A855F7', '#7E22CE'] as const, // Richer purple
+  primary: ['#7C3AED', '#A78BFA'] as const, // The requested vibrant purple gradient
   secondary: ['#10B981', '#059669'] as const, // Success
   onboarding: ['#F3E8FF', '#E9D5FF', '#FAE8FF'] as const, // Soft purple haze
   login: ['#4C1D95', '#6D28D9', '#8B5CF6'] as const, // Deep cosmic purple
@@ -295,4 +295,3 @@ export const darkTheme = {
 
 // Export all design tokens
 export { colors, darkColors, typography };
-

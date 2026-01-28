@@ -5,10 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import GradientBackground from '../../components/ui/GradientBackground';
 import CustomCard from '../../components/ui/CustomCard';
 import api from '../../services/api';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const AdminCreateUserScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -26,9 +28,8 @@ const AdminCreateUserScreen = () => {
         setLoading(true);
         try {
             await api.post('/admin/users', formData);
-            Alert.alert('Success', 'User created successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            await api.post('/admin/users', formData);
+            setShowSuccessModal(true);
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to create user');
         } finally {
@@ -133,6 +134,16 @@ const AdminCreateUserScreen = () => {
                         </TouchableOpacity>
                     </CustomCard>
                 </ScrollView>
+                <SuccessModal
+                    visible={showSuccessModal}
+                    title="User Created!"
+                    message="New user account has been created successfully."
+                    onClose={() => {
+                        setShowSuccessModal(false);
+                        navigation.goBack();
+                    }}
+                    buttonText="Back to List"
+                />
             </View>
         </GradientBackground>
     );

@@ -87,6 +87,7 @@ const loginUser = async (req, res) => {
                 avatar: user.avatar,
                 themeColor: user.themeColor,
                 xp: user.xp,
+                level: user.level,
                 streak: user.streak,
                 token: generateToken(user._id),
                 refreshToken: generateRefreshToken(user._id)
@@ -163,6 +164,7 @@ const updateProfile = async (req, res) => {
                 status: updatedUser.status,
                 selectedClass: updatedUser.selectedClass,
                 xp: updatedUser.xp,
+                level: updatedUser.level,
                 streak: updatedUser.streak,
                 avatar: updatedUser.avatar,
                 themeColor: updatedUser.themeColor,
@@ -176,4 +178,34 @@ const updateProfile = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, refreshToken, logoutUser, updateProfile };
+// @desc    Get user profile
+// @route   GET /api/auth/profile
+// @access  Private
+const getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+
+        if (user) {
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                status: user.status,
+                selectedClass: user.selectedClass,
+                xp: user.xp,
+                level: user.level,
+                streak: user.streak,
+                avatar: user.avatar,
+                themeColor: user.themeColor,
+                city: user.city
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { registerUser, loginUser, refreshToken, logoutUser, updateProfile, getProfile };

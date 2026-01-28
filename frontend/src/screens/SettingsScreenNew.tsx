@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
 import CustomButton from '../components/ui/CustomButton';
 import { useResponsive } from '../hooks/useResponsive';
+import UnifiedHeader from '../components/UnifiedHeader';
 
 const SettingsScreen = ({ navigation }: any) => {
     const theme = useTheme();
@@ -123,177 +124,175 @@ const SettingsScreen = ({ navigation }: any) => {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
-                <LinearGradient
-                    colors={['#667EEA', '#764BA2', '#5B4B8A']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.headerBackground, { paddingTop: insets.top + spacing.md }]}
-                >
-                    <View style={styles.headerContent}>
-                        <Text variant="headlineMedium" style={styles.headerTitle}>Settings</Text>
+                <UnifiedHeader
+                    title="Settings"
+                    subtitle="App Preferences"
+                    hideStats={true}
+                />
+
+                <View style={{ marginTop: -40 }}>
+
+                    {/* Account Section */}
+                    <Animated.View entering={FadeInDown.delay(100).duration(600)}>
+                        <Text variant="titleSmall" style={styles.sectionTitle}>ACCOUNT</Text>
+                        <Surface style={styles.section} elevation={2}>
+                            <SettingItem
+                                icon="account-circle"
+                                title="Edit Profile"
+                                description="Update your personal information"
+                                onPress={() => navigation.navigate('Profile')}
+                                gradient={['#667EEA', '#764BA2']}
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="lock-outline"
+                                title="Privacy & Security"
+                                description="Manage your privacy settings"
+                                onPress={() => navigation.navigate('PrivacySecurity')}
+                            />
+                        </Surface>
+                    </Animated.View>
+
+                    {/* Preferences Section */}
+                    <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+                        <Text variant="titleSmall" style={styles.sectionTitle}>PREFERENCES</Text>
+                        <Surface style={styles.section} elevation={2}>
+                            <SettingItem
+                                icon="theme-light-dark"
+                                title="Dark Mode"
+                                description="Toggle dark theme"
+                                gradient={isDark ? ['#4A5568', '#2D3748'] : undefined}
+                                rightComponent={
+                                    <Switch
+                                        value={isDark}
+                                        onValueChange={toggleTheme}
+                                        color="#667EEA"
+                                    />
+                                }
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="bell-outline"
+                                title="View Notifications"
+                                description="See your notifications"
+                                gradient={notificationsEnabled ? ['#10B981', '#059669'] : undefined}
+                                onPress={() => navigation.navigate('Notifications')}
+                                rightComponent={
+                                    <Switch
+                                        value={notificationsEnabled}
+                                        onValueChange={setNotificationsEnabled}
+                                        color="#667EEA"
+                                    />
+                                }
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="volume-high"
+                                title="Sound Effects"
+                                description="Enable sound effects"
+                                gradient={soundEnabled ? ['#F59E0B', '#D97706'] : undefined}
+                                rightComponent={
+                                    <Switch
+                                        value={soundEnabled}
+                                        onValueChange={setSoundEnabled}
+                                        color="#667EEA"
+                                    />
+                                }
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="clock-time-eight-outline"
+                                title="Digital Wellbeing"
+                                description="Track your screen time"
+                                onPress={() => navigation.navigate('DigitalWellbeing')}
+                                gradient={['#10B981', '#059669']}
+                            />
+                        </Surface>
+                    </Animated.View>
+
+                    {/* Data & Storage Section */}
+                    <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+                        <Text variant="titleSmall" style={styles.sectionTitle}>DATA & STORAGE</Text>
+                        <Surface style={styles.section} elevation={2}>
+                            <SettingItem
+                                icon="cloud-sync-outline"
+                                title="Sync Data"
+                                description="Download content for offline use"
+                                onPress={() => navigation.navigate('Sync')}
+                                gradient={['#3B82F6', '#2563EB']}
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="download-outline"
+                                title="Auto Download"
+                                description="Automatically download new content"
+                                gradient={autoDownload ? ['#8B5CF6', '#7C3AED'] : undefined}
+                                rightComponent={
+                                    <Switch
+                                        value={autoDownload}
+                                        onValueChange={setAutoDownload}
+                                        color="#667EEA"
+                                    />
+                                }
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="trash-can-outline"
+                                title="Clear Cache"
+                                description="Free up storage space"
+                                onPress={() => Alert.alert('Clear Cache', 'Are you sure you want to clear the cache?')}
+                            />
+                        </Surface>
+                    </Animated.View>
+
+                    {/* About Section */}
+                    <Animated.View entering={FadeInDown.delay(400).duration(600)}>
+                        <Text variant="titleSmall" style={styles.sectionTitle}>ABOUT</Text>
+                        <Surface style={styles.section} elevation={2}>
+                            <SettingItem
+                                icon="information-outline"
+                                title="About App"
+                                description="Version 1.0.0"
+                                onPress={() => setShowAboutModal(true)}
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="help-circle-outline"
+                                title="Help & Support"
+                                description="Get help and contact support"
+                                onPress={() => setShowHelpModal(true)}
+                            />
+                            <View style={styles.divider} />
+                            <SettingItem
+                                icon="file-document-outline"
+                                title="Terms & Privacy"
+                                description="Read our terms and privacy policy"
+                                onPress={() => setShowTermsModal(true)}
+                            />
+                        </Surface>
+                    </Animated.View>
+
+                    {/* Logout Button */}
+                    <Animated.View entering={FadeInDown.delay(500).duration(600)} style={styles.logoutContainer}>
+                        <CustomButton
+                            variant="outlined"
+                            icon="logout"
+                            onPress={handleLogout}
+                            style={styles.logoutButton}
+                        >
+                            Logout
+                        </CustomButton>
+                    </Animated.View>
+
+                    {/* App Info */}
+                    <View style={styles.appInfo}>
+                        <Text variant="bodySmall" style={styles.appInfoText}>
+                            EduGames v1.0.0
+                        </Text>
+                        <Text variant="bodySmall" style={styles.appInfoText}>
+                            Made with ❤️ for rural students
+                        </Text>
                     </View>
-                </LinearGradient>
-
-                {/* Account Section */}
-                <Animated.View entering={FadeInDown.delay(100).duration(600)}>
-                    <Text variant="titleSmall" style={styles.sectionTitle}>ACCOUNT</Text>
-                    <Surface style={styles.section} elevation={2}>
-                        <SettingItem
-                            icon="account-circle"
-                            title="Edit Profile"
-                            description="Update your personal information"
-                            onPress={() => navigation.navigate('Profile')}
-                            gradient={['#667EEA', '#764BA2']}
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="lock-outline"
-                            title="Privacy & Security"
-                            description="Manage your privacy settings"
-                            onPress={() => navigation.navigate('PrivacySecurity')}
-                        />
-                    </Surface>
-                </Animated.View>
-
-                {/* Preferences Section */}
-                <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-                    <Text variant="titleSmall" style={styles.sectionTitle}>PREFERENCES</Text>
-                    <Surface style={styles.section} elevation={2}>
-                        <SettingItem
-                            icon="theme-light-dark"
-                            title="Dark Mode"
-                            description="Toggle dark theme"
-                            gradient={isDark ? ['#4A5568', '#2D3748'] : undefined}
-                            rightComponent={
-                                <Switch
-                                    value={isDark}
-                                    onValueChange={toggleTheme}
-                                    color="#667EEA"
-                                />
-                            }
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="bell-outline"
-                            title="View Notifications"
-                            description="See your notifications"
-                            gradient={notificationsEnabled ? ['#10B981', '#059669'] : undefined}
-                            onPress={() => navigation.navigate('Notifications')}
-                            rightComponent={
-                                <Switch
-                                    value={notificationsEnabled}
-                                    onValueChange={setNotificationsEnabled}
-                                    color="#667EEA"
-                                />
-                            }
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="volume-high"
-                            title="Sound Effects"
-                            description="Enable sound effects"
-                            gradient={soundEnabled ? ['#F59E0B', '#D97706'] : undefined}
-                            rightComponent={
-                                <Switch
-                                    value={soundEnabled}
-                                    onValueChange={setSoundEnabled}
-                                    color="#667EEA"
-                                />
-                            }
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="clock-time-eight-outline"
-                            title="Digital Wellbeing"
-                            description="Track your screen time"
-                            onPress={() => navigation.navigate('DigitalWellbeing')}
-                            gradient={['#10B981', '#059669']}
-                        />
-                    </Surface>
-                </Animated.View>
-
-                {/* Data & Storage Section */}
-                <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-                    <Text variant="titleSmall" style={styles.sectionTitle}>DATA & STORAGE</Text>
-                    <Surface style={styles.section} elevation={2}>
-                        <SettingItem
-                            icon="cloud-sync-outline"
-                            title="Sync Data"
-                            description="Download content for offline use"
-                            onPress={() => navigation.navigate('Sync')}
-                            gradient={['#3B82F6', '#2563EB']}
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="download-outline"
-                            title="Auto Download"
-                            description="Automatically download new content"
-                            gradient={autoDownload ? ['#8B5CF6', '#7C3AED'] : undefined}
-                            rightComponent={
-                                <Switch
-                                    value={autoDownload}
-                                    onValueChange={setAutoDownload}
-                                    color="#667EEA"
-                                />
-                            }
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="trash-can-outline"
-                            title="Clear Cache"
-                            description="Free up storage space"
-                            onPress={() => Alert.alert('Clear Cache', 'Are you sure you want to clear the cache?')}
-                        />
-                    </Surface>
-                </Animated.View>
-
-                {/* About Section */}
-                <Animated.View entering={FadeInDown.delay(400).duration(600)}>
-                    <Text variant="titleSmall" style={styles.sectionTitle}>ABOUT</Text>
-                    <Surface style={styles.section} elevation={2}>
-                        <SettingItem
-                            icon="information-outline"
-                            title="About App"
-                            description="Version 1.0.0"
-                            onPress={() => setShowAboutModal(true)}
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="help-circle-outline"
-                            title="Help & Support"
-                            description="Get help and contact support"
-                            onPress={() => setShowHelpModal(true)}
-                        />
-                        <View style={styles.divider} />
-                        <SettingItem
-                            icon="file-document-outline"
-                            title="Terms & Privacy"
-                            description="Read our terms and privacy policy"
-                            onPress={() => setShowTermsModal(true)}
-                        />
-                    </Surface>
-                </Animated.View>
-
-                {/* Logout Button */}
-                <Animated.View entering={FadeInDown.delay(500).duration(600)} style={styles.logoutContainer}>
-                    <CustomButton
-                        variant="outlined"
-                        icon="logout"
-                        onPress={handleLogout}
-                        style={styles.logoutButton}
-                    >
-                        Logout
-                    </CustomButton>
-                </Animated.View>
-
-                {/* App Info */}
-                <View style={styles.appInfo}>
-                    <Text variant="bodySmall" style={styles.appInfoText}>
-                        EduGames v1.0.0
-                    </Text>
-                    <Text variant="bodySmall" style={styles.appInfoText}>
-                        Made with ❤️ for rural students
-                    </Text>
                 </View>
             </ScrollView>
 
@@ -438,6 +437,9 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     headerContent: {
         paddingTop: spacing.md,
         paddingBottom: spacing.lg,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
     },
     headerTitle: {
         color: '#fff',
@@ -452,12 +454,18 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         marginTop: spacing.lg,
         letterSpacing: 0.5,
         paddingHorizontal: spacing.lg,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
     },
     section: {
         borderRadius: 20,
         backgroundColor: isDark ? '#1E293B' : '#fff',
         overflow: 'hidden',
         marginHorizontal: spacing.lg,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
     },
     settingItem: {
         flexDirection: 'row',
@@ -492,6 +500,9 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     logoutContainer: {
         marginTop: spacing.xl,
         paddingHorizontal: spacing.lg,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
     },
     logoutButton: {
         borderRadius: 16,
@@ -501,6 +512,9 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         alignItems: 'center',
         marginTop: spacing.xl,
         paddingHorizontal: spacing.lg,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
     },
     appInfoText: {
         color: isDark ? '#94A3B8' : '#999',

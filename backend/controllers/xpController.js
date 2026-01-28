@@ -20,8 +20,8 @@ const addXP = async (req, res) => {
         // Add XP
         user.xp += amount;
 
-        // Calculate level (100 XP per level)
-        user.level = Math.floor(user.xp / 100) + 1;
+        // Calculate level (150 XP per level)
+        user.level = Math.floor(user.xp / 150) + 1;
         user.lastXpUpdate = new Date();
 
         await user.save();
@@ -53,7 +53,7 @@ const syncXP = async (req, res) => {
         // Only update if client XP is higher (offline progress)
         if (xp > user.xp) {
             user.xp = xp;
-            user.level = level || Math.floor(xp / 100) + 1;
+            user.level = level || Math.floor(xp / 150) + 1;
             user.lastXpUpdate = new Date();
             await user.save();
         }
@@ -81,8 +81,8 @@ const getXPStatus = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const xpInLevel = user.xp % 100;
-        const xpForNextLevel = 100;
+        const xpInLevel = user.xp % 150;
+        const xpForNextLevel = 150;
 
         res.json({
             xp: user.xp,

@@ -23,7 +23,7 @@ const seedLessons = async () => {
         }
     ];
     await Lesson.insertMany(lessons);
-    console.log('Lessons seeded');
+    console.log('      ✓ Lessons seeded');
 };
 
 const seedQuizzes = async () => {
@@ -45,7 +45,7 @@ const seedQuizzes = async () => {
         }
     ];
     await Quiz.insertMany(quizzes);
-    console.log('Quizzes seeded');
+    console.log('      ✓ Quizzes seeded');
 };
 
 const seedAnatomy = async () => {
@@ -62,7 +62,19 @@ const seedAnatomy = async () => {
         }
     ];
     await Anatomy.insertMany(anatomy);
-    console.log('Anatomy seeded');
+    console.log('      ✓ Anatomy seeded');
 };
 
-module.exports = { seedLessons, seedQuizzes, seedAnatomy };
+const seedStatic = async () => {
+    console.log('🗿 Seeding Static Data...');
+    try {
+        await seedLessons();
+        await seedQuizzes();
+        await seedAnatomy();
+    } catch (error) {
+        console.error('   ❌ Error seeding static data:', error.message);
+        throw error;
+    }
+};
+
+module.exports = seedStatic;

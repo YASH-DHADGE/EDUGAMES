@@ -91,12 +91,12 @@ const SimulationListScreen = ({ route, navigation }: any) => {
 
     const getSubjectGradient = (subject: string) => {
         const gradients: Record<string, string[]> = {
-            'Physics': ['#4A90E2', '#2196F3'],
-            'Chemistry': ['#66BB6A', '#4CAF50'],
-            'Math': ['#FFA726', '#FF9800'],
-            'Biology': ['#AB47BC', '#9C27B0']
+            'Physics': ['#3B82F6', '#2563EB'],
+            'Chemistry': ['#10B981', '#059669'],
+            'Math': ['#F59E0B', '#D97706'],
+            'Biology': ['#8B5CF6', '#7C3AED']
         };
-        return gradients[subject] || ['#6A5AE0', '#8E2DE2'];
+        return gradients[subject] || ['#6366F1', '#4F46E5'];
     };
 
     const getGridColumns = () => {
@@ -160,32 +160,27 @@ const SimulationListScreen = ({ route, navigation }: any) => {
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-            {/* Header with Gradient */}
+            {/* Modern Clean Header */}
             <LinearGradient
-                colors={['#6A5AE0', '#8E2DE2', '#C0B6F2']}
+                colors={['#1E293B', '#334155', '#475569']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={[styles.headerBackground, { paddingTop: insets.top + spacing.md }]}
             >
-                {/* Decorative circles */}
-                <View style={[styles.decorativeCircle, { top: -50, right: -30, width: 150, height: 150 }]} />
-                <View style={[styles.decorativeCircle, { bottom: -40, left: -20, width: 120, height: 120 }]} />
-
-                <Animated.View entering={FadeInDown.duration(600)} style={styles.headerContent}>
+                <Animated.View entering={FadeInDown.duration(500)} style={styles.headerContent}>
                     <View style={styles.headerRow}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                             <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
                         </TouchableOpacity>
                         <View style={styles.headerTitleContainer}>
-                            <MaterialCommunityIcons name="flask" size={28} color="#FFD700" />
-                            <Text variant="headlineSmall" style={styles.headerTitle}>
-                                StreakWise Simulations
+                            <Text variant="headlineMedium" style={styles.headerTitle}>
+                                Simulations
                             </Text>
                         </View>
                         <View style={{ width: 40 }} />
                     </View>
                     <Text variant="bodyMedium" style={styles.headerSubtitle}>
-                        Explore science through interactive learning
+                        Interactive science learning experiences
                     </Text>
                 </Animated.View>
             </LinearGradient>
@@ -304,22 +299,18 @@ const SimulationListScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FAFAFA',
     },
     headerBackground: {
         paddingBottom: spacing.xxl,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
         overflow: 'hidden',
-    },
-    decorativeCircle: {
-        position: 'absolute',
-        borderRadius: 999,
-        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     headerContent: {
         paddingHorizontal: spacing.lg,
-        paddingTop: spacing.md,
+        paddingTop: spacing.sm,
+        paddingBottom: spacing.md,
     },
     headerRow: {
         flexDirection: 'row',
@@ -339,23 +330,25 @@ const styles = StyleSheet.create({
         marginTop: -spacing.xl,
     },
     backButton: {
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 10,
+        backgroundColor: 'rgba(255,255,255,0.15)',
         borderRadius: 12,
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
     },
     headerTitle: {
-        fontWeight: '800',
+        fontWeight: '700',
         color: '#fff',
-        fontSize: 20,
+        fontSize: 24,
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        color: 'rgba(255,255,255,0.9)',
+        color: 'rgba(255,255,255,0.85)',
         textAlign: 'center',
         marginTop: spacing.xs,
+        fontSize: 13,
     },
     searchContainer: {
         paddingHorizontal: spacing.lg,
@@ -364,11 +357,13 @@ const styles = StyleSheet.create({
     searchBar: {
         backgroundColor: '#fff',
         borderRadius: 16,
-        elevation: 4,
+        elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.08,
         shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
     },
     searchInput: {
         minHeight: 50,
@@ -384,14 +379,14 @@ const styles = StyleSheet.create({
     },
     chip: {
         marginRight: spacing.sm,
-        backgroundColor: '#fff',
+        backgroundColor: '#F3F4F6',
         height: 40,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderWidth: 0,
+        borderRadius: 12,
     },
     selectedChip: {
-        backgroundColor: '#6A5AE0',
-        borderColor: '#6A5AE0',
+        backgroundColor: '#1E293B',
+        borderColor: '#1E293B',
     },
     chipText: {
         color: '#666',
@@ -421,58 +416,63 @@ const styles = StyleSheet.create({
         padding: spacing.sm,
     },
     card: {
-        borderRadius: 20,
+        borderRadius: 16,
         backgroundColor: '#fff',
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.08,
         shadowRadius: 12,
-        elevation: 3,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
     },
     cardGradient: {
-        height: 120,
+        height: 130,
         justifyContent: 'center',
         alignItems: 'center',
     },
     iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: 'rgba(255,255,255,0.3)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderColor: 'rgba(255,255,255,0.5)',
     },
     cardContent: {
-        padding: spacing.lg,
+        padding: spacing.md,
     },
     cardTitle: {
         fontWeight: '700',
         textAlign: 'center',
         marginBottom: spacing.sm,
-        minHeight: 40,
-        fontSize: 15,
-        color: '#1A1A1A',
+        minHeight: 38,
+        fontSize: 14,
+        color: '#1F2937',
+        lineHeight: 19,
     },
     cardDescription: {
         textAlign: 'center',
-        color: '#666',
+        color: '#6B7280',
         marginBottom: spacing.md,
         minHeight: 32,
-        fontSize: 12,
-        lineHeight: 18,
+        fontSize: 11.5,
+        lineHeight: 17,
     },
     subjectBadge: {
-        paddingVertical: 6,
-        paddingHorizontal: 14,
-        borderRadius: 16,
+        paddingVertical: 5,
+        paddingHorizontal: 12,
+        borderRadius: 8,
         alignSelf: 'center',
     },
     subjectText: {
         fontWeight: '700',
-        fontSize: 11,
+        fontSize: 10,
+        letterSpacing: 0.3,
+        textTransform: 'uppercase',
     },
     loadingContainer: {
         flex: 1,
@@ -488,10 +488,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.xl,
     },
     emptyIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#F0F0F0',
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: spacing.lg,

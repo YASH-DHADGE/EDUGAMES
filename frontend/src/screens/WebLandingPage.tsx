@@ -1,413 +1,441 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
-import { Text, Button } from 'react-native-paper';
+import React from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, StatusBar } from 'react-native';
+import { Text } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
-import { spacing } from '../theme';
-
-const { width } = Dimensions.get('window');
-const isWeb = width > 768;
+import WaveBackground from '../components/WaveBackground';
 
 const FEATURES = [
     {
         id: 1,
         icon: 'lightning-bolt',
-        title: 'Track Your Streaks',
-        description: 'Build daily habits and maintain your learning streak. Consistency is the key to success!',
-        gradient: ['#667eea', '#764ba2'] as readonly [string, string],
+        title: 'Interactive Learning',
+        description: 'Engage with interactive lessons, quizzes, and science simulations that make learning fun.',
+        color: '#a78bfa',
     },
     {
         id: 2,
         icon: 'trophy-variant',
-        title: 'Earn Rewards',
-        description: 'Unlock badges, collect XP, and level up as you progress through your learning journey.',
-        gradient: ['#f093fb', '#f5576c'] as readonly [string, string],
+        title: 'Track Progress',
+        description: 'Monitor your learning journey with XP, levels, and achievement badges.',
+        color: '#c084fc',
     },
     {
         id: 3,
-        icon: 'rocket-launch',
-        title: 'Learn Anywhere',
-        description: 'Access your lessons offline. Learn at your own pace, anytime, anywhere.',
-        gradient: ['#4facfe', '#00f2fe'] as readonly [string, string],
+        icon: 'flask',
+        title: 'Science Labs',
+        description: 'Explore biology, chemistry, and physics through hands-on virtual experiments.',
+        color: '#818cf8',
     },
 ];
 
+const STATS = [
+    { value: '10+', label: 'Science Games', sublabel: 'Learn by playing' },
+    { value: '50+', label: 'Lessons', sublabel: 'Expert-crafted content' },
+    { value: '100%', label: 'Free', sublabel: 'No hidden fees' },
+];
+
 const WebLandingPage = ({ navigation }: any) => {
-    const [currentFeature, setCurrentFeature] = useState(0);
+    const { width } = useWindowDimensions();
+    const isMobile = width < 768;
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            {/* Hero Section */}
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+            {/* Dark Gradient Background */}
             <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#1e1b4b', '#312e81', '#4c1d95']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.hero}
+                style={styles.background}
+            />
+
+            {/* Wave Animation */}
+            <WaveBackground colors={['rgba(139, 92, 246, 0.2)', 'rgba(167, 139, 250, 0.15)', 'rgba(196, 181, 253, 0.1)']} />
+
+            <ScrollView
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
             >
-                {/* Decorative circles */}
-                <View style={[styles.decorativeCircle, { top: -100, right: -100, width: 300, height: 300 }]} />
-                <View style={[styles.decorativeCircle, { bottom: -80, left: -80, width: 250, height: 250 }]} />
-
-                <View style={styles.heroContent}>
-                    <Animated.View entering={FadeInDown.duration(800)} style={styles.logoContainer}>
-                        <MaterialCommunityIcons name="school" size={120} color="#fff" />
+                {/* Hero Section */}
+                <View style={[styles.hero, { paddingHorizontal: isMobile ? 20 : 60 }]}>
+                    {/* Logo */}
+                    <Animated.View entering={FadeInDown.delay(200).duration(1000)} style={styles.logoSection}>
+                        <View style={styles.logoCircle}>
+                            <MaterialCommunityIcons name="flask" size={64} color="#a78bfa" />
+                        </View>
+                        <Text style={styles.logoText}>CoreTechLabs</Text>
                     </Animated.View>
 
-                    <Animated.View entering={FadeInUp.delay(200).duration(800)}>
-                        <Text style={styles.heroTitle}>Welcome to StreakWise</Text>
-                        <Text style={styles.heroSubtitle}>
-                            Your Personal Learning Companion
+                    {/* Hero Content */}
+                    <Animated.View entering={FadeInUp.delay(400).duration(1000)} style={styles.heroContent}>
+                        <Text style={[styles.heroTitle, { fontSize: isMobile ? 36 : 56 }]}>
+                            Discover Intelligence with{'\n'}
+                            <Text style={styles.heroTitleAccent}>Science Learning</Text>
                         </Text>
-                        <Text style={styles.heroDescription}>
-                            Track streaks, earn rewards, and master subjects from Class 6 to 12.
-                            Learn offline, anytime, anywhere.
+                        <Text style={[styles.heroSubtitle, { fontSize: isMobile ? 16 : 20 }]}>
+                            CoreTechLabs unlocks smart insights with advanced science learning solutions.
+                            Explore interactive lessons, games, and simulations.
+                        </Text>
+
+                        {/* CTA Buttons */}
+                        <View style={[styles.ctaContainer, { flexDirection: isMobile ? 'column' : 'row' }]}>
+                            <TouchableOpacity
+                                style={[styles.primaryBtn, isMobile && { width: '100%' }]}
+                                onPress={() => navigation.navigate('Register')}
+                                activeOpacity={0.9}
+                            >
+                                <LinearGradient
+                                    colors={['#7c3aed', '#a78bfa']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.primaryBtnGradient}
+                                >
+                                    <Text style={styles.primaryBtnText}>Get Started</Text>
+                                    <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+                                </LinearGradient>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.secondaryBtn, isMobile && { width: '100%' }]}
+                                onPress={() => navigation.navigate('Login')}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.secondaryBtnText}>Sign In</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Animated.View>
+                </View>
+
+                {/* Features Section */}
+                <View style={[styles.featuresSection, { paddingHorizontal: isMobile ? 20 : 60 }]}>
+                    <Animated.View entering={FadeInUp.delay(600).duration(800)}>
+                        <Text style={[styles.sectionTitle, { fontSize: isMobile ? 28 : 40 }]}>
+                            Why Choose CoreTechLabs?
+                        </Text>
+                        <Text style={[styles.sectionSubtitle, { fontSize: isMobile ? 14 : 18 }]}>
+                            Everything you need to excel in science education
                         </Text>
                     </Animated.View>
 
-                    <Animated.View entering={FadeInUp.delay(400).duration(800)} style={styles.ctaContainer}>
+                    <View style={[styles.featuresGrid, { flexDirection: isMobile ? 'column' : 'row' }]}>
+                        {FEATURES.map((feature, index) => (
+                            <Animated.View
+                                key={feature.id}
+                                entering={ZoomIn.delay(800 + index * 150).duration(600)}
+                                style={[styles.featureCard, { width: isMobile ? '100%' : '31%' }]}
+                            >
+                                <View style={[styles.featureIconContainer, { backgroundColor: feature.color + '20', borderColor: feature.color + '40' }]}>
+                                    <MaterialCommunityIcons
+                                        name={feature.icon as any}
+                                        size={40}
+                                        color={feature.color}
+                                    />
+                                </View>
+                                <Text style={styles.featureTitle}>{feature.title}</Text>
+                                <Text style={styles.featureDescription}>{feature.description}</Text>
+                            </Animated.View>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Stats Section */}
+                <View style={[styles.statsSection, { paddingHorizontal: isMobile ? 20 : 60 }]}>
+                    <View style={[styles.statsGrid, { flexDirection: isMobile ? 'column' : 'row' }]}>
+                        {STATS.map((stat, index) => (
+                            <Animated.View
+                                key={index}
+                                entering={FadeInUp.delay(1000 + index * 150).duration(600)}
+                                style={styles.statCard}
+                            >
+                                <Text style={[styles.statValue, { fontSize: isMobile ? 40 : 56 }]}>{stat.value}</Text>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
+                                <Text style={styles.statSublabel}>{stat.sublabel}</Text>
+                            </Animated.View>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Final CTA Section */}
+                <View style={[styles.finalCtaSection, { paddingHorizontal: isMobile ? 20 : 60 }]}>
+                    <Animated.View entering={FadeInUp.delay(1300).duration(800)} style={styles.finalCtaContent}>
+                        <Text style={[styles.finalCtaTitle, { fontSize: isMobile ? 28 : 40 }]}>
+                            Ready to Start Learning?
+                        </Text>
+                        <Text style={[styles.finalCtaSubtitle, { fontSize: isMobile ? 14 : 18 }]}>
+                            Join students mastering science through interactive learning
+                        </Text>
                         <TouchableOpacity
-                            style={styles.primaryButton}
+                            style={[styles.finalCtaBtn, isMobile && { width: '100%' }]}
                             onPress={() => navigation.navigate('Register')}
+                            activeOpacity={0.9}
                         >
                             <LinearGradient
-                                colors={['#fff', '#f0f0f0']}
-                                style={styles.buttonGradient}
+                                colors={['#7c3aed', '#a78bfa']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.finalCtaBtnGradient}
                             >
-                                <Text style={styles.primaryButtonText}>Get Started Free</Text>
-                                <MaterialCommunityIcons name="arrow-right" size={24} color="#667eea" />
+                                <Text style={styles.finalCtaBtnText}>Create Free Account</Text>
+                                <MaterialCommunityIcons name="rocket-launch" size={24} color="#fff" />
                             </LinearGradient>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.secondaryButton}
-                            onPress={() => navigation.navigate('Login')}
-                        >
-                            <Text style={styles.secondaryButtonText}>Sign In</Text>
-                        </TouchableOpacity>
                     </Animated.View>
                 </View>
-            </LinearGradient>
 
-            {/* Features Section */}
-            <View style={styles.featuresSection}>
-                <Animated.View entering={FadeInUp.delay(600).duration(800)}>
-                    <Text style={styles.sectionTitle}>Why Choose StreakWise?</Text>
-                    <Text style={styles.sectionSubtitle}>
-                        Everything you need to excel in your studies
-                    </Text>
-                </Animated.View>
-
-                <View style={styles.featuresGrid}>
-                    {FEATURES.map((feature, index) => (
-                        <Animated.View
-                            key={feature.id}
-                            entering={ZoomIn.delay(800 + index * 150).duration(600)}
-                            style={styles.featureCard}
-                        >
-                            <LinearGradient
-                                colors={feature.gradient}
-                                style={styles.featureIconContainer}
-                            >
-                                <MaterialCommunityIcons
-                                    name={feature.icon as any}
-                                    size={48}
-                                    color="#fff"
-                                />
-                            </LinearGradient>
-                            <Text style={styles.featureTitle}>{feature.title}</Text>
-                            <Text style={styles.featureDescription}>{feature.description}</Text>
-                        </Animated.View>
-                    ))}
+                {/* Footer */}
+                <View style={styles.footer}>
+                    <MaterialCommunityIcons name="flask" size={32} color="#a78bfa" style={{ marginBottom: 12 }} />
+                    <Text style={styles.footerBrand}>CoreTechLabs</Text>
+                    <Text style={styles.footerTagline}>Science Learning Platform</Text>
+                    <Text style={styles.footerCopyright}>© 2024 CoreTechLabs. All rights reserved.</Text>
                 </View>
-            </View>
-
-            {/* Stats Section */}
-            <LinearGradient
-                colors={['#f093fb', '#f5576c']}
-                style={styles.statsSection}
-            >
-                <View style={styles.statsGrid}>
-                    <Animated.View entering={FadeInUp.delay(1200).duration(600)} style={styles.statCard}>
-                        <Text style={styles.statNumber}>7</Text>
-                        <Text style={styles.statLabel}>Classes</Text>
-                        <Text style={styles.statSubtext}>6th to 12th</Text>
-                    </Animated.View>
-
-                    <Animated.View entering={FadeInUp.delay(1350).duration(600)} style={styles.statCard}>
-                        <Text style={styles.statNumber}>100+</Text>
-                        <Text style={styles.statLabel}>Chapters</Text>
-                        <Text style={styles.statSubtext}>Across subjects</Text>
-                    </Animated.View>
-
-                    <Animated.View entering={FadeInUp.delay(1500).duration(600)} style={styles.statCard}>
-                        <Text style={styles.statNumber}>∞</Text>
-                        <Text style={styles.statLabel}>Practice</Text>
-                        <Text style={styles.statSubtext}>Unlimited quizzes</Text>
-                    </Animated.View>
-                </View>
-            </LinearGradient>
-
-            {/* CTA Section */}
-            <View style={styles.ctaSection}>
-                <Animated.View entering={FadeInUp.delay(1650).duration(800)}>
-                    <Text style={styles.ctaTitle}>Ready to Start Learning?</Text>
-                    <Text style={styles.ctaSubtitle}>
-                        Join thousands of students improving their grades
-                    </Text>
-
-                    <TouchableOpacity
-                        style={styles.finalCta}
-                        onPress={() => navigation.navigate('Register')}
-                    >
-                        <LinearGradient
-                            colors={['#667eea', '#764ba2']}
-                            style={styles.finalCtaGradient}
-                        >
-                            <Text style={styles.finalCtaText}>Create Free Account</Text>
-                            <MaterialCommunityIcons name="rocket-launch" size={24} color="#fff" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </Animated.View>
-            </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <Text style={styles.footerText}>© 2024 StreakWise. All rights reserved.</Text>
-                <Text style={styles.footerSubtext}>Learn smarter, not harder.</Text>
-            </View>
-        </ScrollView>
+            </ScrollView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#1e1b4b',
+    },
+    background: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+    },
+    scrollView: {
+        flex: 1,
+        zIndex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     hero: {
-        minHeight: isWeb ? 600 : 500,
         paddingTop: 80,
-        paddingBottom: 60,
-        paddingHorizontal: spacing.xl,
-        overflow: 'hidden',
-        position: 'relative',
+        paddingBottom: 80,
+        alignItems: 'center',
     },
-    decorativeCircle: {
-        position: 'absolute',
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderRadius: 1000,
+    logoSection: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    logoCircle: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(167, 139, 250, 0.15)',
+        borderWidth: 2,
+        borderColor: 'rgba(167, 139, 250, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    logoText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#fff',
+        letterSpacing: 0.5,
     },
     heroContent: {
         alignItems: 'center',
-        zIndex: 1,
-    },
-    logoContainer: {
-        marginBottom: spacing.xl,
+        maxWidth: 800,
     },
     heroTitle: {
-        fontSize: isWeb ? 56 : 40,
-        fontWeight: '900',
+        fontWeight: 'bold',
         color: '#fff',
         textAlign: 'center',
-        marginBottom: spacing.md,
-        letterSpacing: -1,
+        marginBottom: 16,
+        lineHeight: 64,
+    },
+    heroTitleAccent: {
+        color: '#a78bfa',
     },
     heroSubtitle: {
-        fontSize: isWeb ? 28 : 22,
-        fontWeight: '700',
-        color: 'rgba(255,255,255,0.95)',
+        color: 'rgba(255,255,255,0.7)',
         textAlign: 'center',
-        marginBottom: spacing.md,
-    },
-    heroDescription: {
-        fontSize: isWeb ? 18 : 16,
-        color: 'rgba(255,255,255,0.9)',
-        textAlign: 'center',
-        lineHeight: 26,
+        lineHeight: 28,
+        marginBottom: 40,
         maxWidth: 600,
-        marginBottom: spacing.xxl,
     },
     ctaContainer: {
-        flexDirection: isWeb ? 'row' : 'column',
-        gap: spacing.md,
+        gap: 16,
         alignItems: 'center',
     },
-    primaryButton: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 10,
+    primaryBtn: {
+        borderRadius: 12,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 6,
     },
-    buttonGradient: {
+    primaryBtnGradient: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 18,
+        paddingVertical: 16,
         paddingHorizontal: 32,
-        gap: spacing.sm,
+        borderRadius: 12,
+        gap: 8,
     },
-    primaryButtonText: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#667eea',
-    },
-    secondaryButton: {
-        paddingVertical: 18,
-        paddingHorizontal: 32,
-        borderRadius: 16,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.5)',
-    },
-    secondaryButtonText: {
-        fontSize: 18,
-        fontWeight: '700',
+    primaryBtnText: {
         color: '#fff',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    secondaryBtn: {
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: 'rgba(167, 139, 250, 0.5)',
+    },
+    secondaryBtnText: {
+        color: '#e5e7eb',
+        fontSize: 16,
+        fontWeight: '600',
     },
     featuresSection: {
-        padding: spacing.xxl,
-        backgroundColor: '#F5F7FA',
+        paddingVertical: 80,
     },
     sectionTitle: {
-        fontSize: isWeb ? 42 : 32,
-        fontWeight: '900',
-        color: '#1A1A1A',
+        fontWeight: 'bold',
+        color: '#fff',
         textAlign: 'center',
-        marginBottom: spacing.sm,
+        marginBottom: 12,
     },
     sectionSubtitle: {
-        fontSize: isWeb ? 20 : 16,
-        color: '#666',
+        color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
-        marginBottom: spacing.xxl,
+        marginBottom: 48,
     },
     featuresGrid: {
-        flexDirection: isWeb ? 'row' : 'column',
+        gap: 24,
         flexWrap: 'wrap',
-        gap: spacing.xl,
-        justifyContent: 'center',
-        maxWidth: 1200,
-        alignSelf: 'center',
+        justifyContent: 'space-between',
     },
     featureCard: {
-        flex: isWeb ? 1 : undefined,
-        minWidth: isWeb ? 300 : undefined,
-        backgroundColor: '#fff',
-        padding: spacing.xl,
-        borderRadius: 24,
+        backgroundColor: 'rgba(30, 27, 75, 0.6)',
+        borderRadius: 20,
+        padding: 32,
+        borderWidth: 1,
+        borderColor: 'rgba(167, 139, 250, 0.2)',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 5,
     },
     featureIconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: spacing.lg,
+        marginBottom: 20,
+        borderWidth: 2,
     },
     featureTitle: {
-        fontSize: 24,
-        fontWeight: '800',
-        color: '#1A1A1A',
-        marginBottom: spacing.sm,
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#fff',
+        marginBottom: 12,
         textAlign: 'center',
     },
     featureDescription: {
-        fontSize: 16,
-        color: '#666',
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
-        lineHeight: 24,
+        lineHeight: 22,
     },
     statsSection: {
-        padding: spacing.xxl,
+        paddingVertical: 60,
     },
     statsGrid: {
-        flexDirection: isWeb ? 'row' : 'column',
-        gap: spacing.xl,
-        justifyContent: 'center',
-        maxWidth: 1000,
-        alignSelf: 'center',
+        backgroundColor: 'rgba(167, 139, 250, 0.1)',
+        borderRadius: 20,
+        padding: 40,
+        borderWidth: 1,
+        borderColor: 'rgba(167, 139, 250, 0.2)',
+        gap: 40,
     },
     statCard: {
         flex: 1,
         alignItems: 'center',
-        padding: spacing.xl,
     },
-    statNumber: {
-        fontSize: isWeb ? 64 : 48,
-        fontWeight: '900',
-        color: '#fff',
-        marginBottom: spacing.sm,
+    statValue: {
+        fontWeight: 'bold',
+        color: '#a78bfa',
+        marginBottom: 8,
     },
     statLabel: {
-        fontSize: 24,
-        fontWeight: '700',
+        fontSize: 20,
+        fontWeight: '600',
         color: '#fff',
-        marginBottom: spacing.xs,
+        marginBottom: 4,
     },
-    statSubtext: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
+    statSublabel: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.6)',
     },
-    ctaSection: {
-        padding: spacing.xxl,
-        backgroundColor: '#fff',
+    finalCtaSection: {
+        paddingVertical: 80,
+    },
+    finalCtaContent: {
         alignItems: 'center',
     },
-    ctaTitle: {
-        fontSize: isWeb ? 42 : 32,
-        fontWeight: '900',
-        color: '#1A1A1A',
+    finalCtaTitle: {
+        fontWeight: 'bold',
+        color: '#fff',
         textAlign: 'center',
-        marginBottom: spacing.sm,
+        marginBottom: 16,
     },
-    ctaSubtitle: {
-        fontSize: isWeb ? 20 : 16,
-        color: '#666',
+    finalCtaSubtitle: {
+        color: 'rgba(255,255,255,0.6)',
         textAlign: 'center',
-        marginBottom: spacing.xxl,
+        marginBottom: 32,
     },
-    finalCta: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        shadowColor: '#667eea',
-        shadowOffset: { width: 0, height: 8 },
+    finalCtaBtn: {
+        borderRadius: 12,
+        shadowColor: '#7c3aed',
+        shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.4,
-        shadowRadius: 16,
-        elevation: 10,
+        shadowRadius: 12,
+        elevation: 8,
     },
-    finalCtaGradient: {
+    finalCtaBtnGradient: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 20,
+        paddingVertical: 18,
         paddingHorizontal: 40,
-        gap: spacing.sm,
+        borderRadius: 12,
+        gap: 12,
     },
-    finalCtaText: {
-        fontSize: 20,
-        fontWeight: '800',
+    finalCtaBtnText: {
         color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
     },
     footer: {
-        padding: spacing.xxl,
-        backgroundColor: '#1A1A1A',
+        paddingVertical: 40,
         alignItems: 'center',
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(167, 139, 250, 0.2)',
     },
-    footerText: {
-        fontSize: 14,
+    footerBrand: {
+        fontSize: 20,
+        fontWeight: '700',
         color: '#fff',
-        marginBottom: spacing.xs,
+        marginBottom: 4,
     },
-    footerSubtext: {
-        fontSize: 12,
+    footerTagline: {
+        fontSize: 14,
         color: 'rgba(255,255,255,0.6)',
+        marginBottom: 12,
+    },
+    footerCopyright: {
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.4)',
     },
 });
 

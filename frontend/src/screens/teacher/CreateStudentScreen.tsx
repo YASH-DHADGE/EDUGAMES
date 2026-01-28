@@ -7,10 +7,12 @@ import CustomCard from '../../components/ui/CustomCard';
 import CustomInput from '../../components/ui/CustomInput';
 import CustomButton from '../../components/ui/CustomButton';
 import api from '../../services/api';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const CreateStudentScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -27,9 +29,8 @@ const CreateStudentScreen = () => {
         setLoading(true);
         try {
             await api.post('/teacher/student', formData);
-            Alert.alert('Success', 'Student account created successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            await api.post('/teacher/student', formData);
+            setShowSuccessModal(true);
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to create student');
         } finally {
@@ -90,6 +91,16 @@ const CreateStudentScreen = () => {
                     </CustomButton>
                 </CustomCard>
             </ScrollView>
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Student Added!"
+                message="Student account created successfully."
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    navigation.goBack();
+                }}
+                buttonText="Back to List"
+            />
         </GradientBackground>
     );
 };

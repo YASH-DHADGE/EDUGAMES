@@ -479,13 +479,15 @@ const GameZoneScreen = () => {
             )}
 
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>{gameType?.replace(/([A-Z])/g, ' $1').trim()}</Text>
-                <View style={styles.timerContainer}>
-                    <MaterialCommunityIcons name="clock-outline" size={20} color="#666" />
-                    <Text style={styles.timerText}>{displayTime}</Text>
+                <View style={styles.webHeaderContainer}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{gameType?.replace(/([A-Z])/g, ' $1').trim()}</Text>
+                    <View style={styles.timerContainer}>
+                        <MaterialCommunityIcons name="clock-outline" size={20} color="#666" />
+                        <Text style={styles.timerText}>{displayTime}</Text>
+                    </View>
                 </View>
             </View>
 
@@ -543,13 +545,20 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center', // Centered for web wrapper
         paddingHorizontal: 16,
         paddingVertical: 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',
         elevation: 2,
+    },
+    webHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 800,
     },
     backButton: {
         padding: 8,
@@ -577,6 +586,9 @@ const styles = StyleSheet.create({
     gameArea: {
         flex: 1,
         padding: 16,
+        width: '100%',
+        maxWidth: 800,
+        alignSelf: 'center',
     },
     centerContent: {
         flex: 1,

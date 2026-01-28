@@ -18,8 +18,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const systemColorScheme = useColorScheme();
-    const [themeType, setThemeTypeState] = useState<ThemeType>('light');
-    const [isDark, setIsDark] = useState(false);
+    const [themeType, setThemeTypeState] = useState<ThemeType>('dark');
+    const [isDark, setIsDark] = useState(true);
 
     useEffect(() => {
         loadTheme();

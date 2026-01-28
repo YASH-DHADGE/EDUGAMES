@@ -13,7 +13,7 @@ import { spacing, gradients, borderRadius } from '../../theme';
 import { useResponsive } from '../../hooks/useResponsive';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MobileLearnDashboard from './MobileLearnDashboard'; // Mobile optimized dashboard
+import UnifiedHeader from '../../components/UnifiedHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -23,11 +23,6 @@ const LearnDashboardScreen = ({ navigation }: any) => {
     const insets = useSafeAreaInsets();
     const { user, xp, streak } = useAuth();
     const { isMobile } = useResponsive();
-
-    // Render mobile version if on mobile
-    if (isMobile) {
-        return <MobileLearnDashboard navigation={navigation} />;
-    }
 
     // Desktop version continues below
     const [subjects, setSubjects] = useState<any[]>([]);
@@ -109,55 +104,15 @@ const LearnDashboardScreen = ({ navigation }: any) => {
         return gradients[subjectName] || ['#607D8B', '#90A4AE'];
     };
 
-    const renderHeader = () => (
-        <View style={styles.headerContainer}>
-            <UserGreetingCard
-                userName={user?.name || 'Student'}
-                streak={streak}
-                avatarId={parseInt(user?.avatar || '1')}
-                variant="light"
-            />
-        </View>
-    );
 
-    const renderDailyGoal = () => {
-        const currentXP = 30;
-        const targetXP = 50;
-        const progress = currentXP / targetXP;
 
-        return (
-            <Animated.View entering={FadeIn.duration(600).delay(200)}>
-                <Surface style={styles.dailyGoalCard} elevation={4}>
-                    <View style={styles.goalHeader}>
-                        <View style={styles.goalTitleRow}>
-                            <View style={styles.goalIconContainer}>
-                                <MaterialCommunityIcons name="target" size={22} color="#6A5AE0" />
-                            </View>
-                            <Text variant="titleSmall" style={styles.goalTitle}>Daily Goal</Text>
-                        </View>
-                        <Text variant="bodyMedium" style={styles.goalXP}>{currentXP}/{targetXP} XP</Text>
-                    </View>
-                    <View style={styles.progressContainer}>
-                        <ProgressBar
-                            progress={progress}
-                            color="#6A5AE0"
-                            style={styles.progressBar}
-                        />
-                    </View>
-                    <Text variant="bodySmall" style={styles.goalMotivation}>
-                        {progress >= 1 ? '🎉 Goal completed! Great job!' : '💪 Keep it up! You\'re almost there.'}
-                    </Text>
-                </Surface>
-            </Animated.View>
-        );
-    };
+
 
     const renderSubjectItem = ({ item, index }: any) => {
         const displayTitle = item.name;
         const displayIcon = item.icon || 'book-open-variant';
-        const displayColor = item.color || '#EDE7FF';
-        const iconColor = '#6A5AE0';
         const progress = item.progress || 0;
+        const gradient = getSubjectGradient(item.name);
 
         const handlePress = () => {
             navigation.navigate('ChapterList', { subjectId: item._id, subjectName: item.name });
@@ -170,37 +125,44 @@ const LearnDashboardScreen = ({ navigation }: any) => {
             >
                 <TouchableOpacity
                     onPress={handlePress}
-                    activeOpacity={0.85}
+                    activeOpacity={0.9}
                     style={styles.subjectCard}
                 >
-                    <Surface style={styles.subjectCardContent} elevation={2}>
+                    <LinearGradient
+                        colors={isDark ? ['#1E293B', '#1E293B'] : ['#EEF2FF', '#EEF2FF']}
+                        style={styles.subjectCardContent}
+                    >
+                        {/* Icon with gradient background */}
                         <LinearGradient
-                            colors={getSubjectGradient(item.name) as any}
+                            colors={gradient as any}
                             style={styles.iconBox}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                         >
-                            <MaterialCommunityIcons name={displayIcon} size={28} color="#fff" />
+                            <MaterialCommunityIcons name={displayIcon} size={36} color="#fff" />
                         </LinearGradient>
 
+                        {/* Subject Info */}
                         <View style={styles.subjectInfo}>
-                            <Text variant="titleMedium" style={styles.subjectName}>{displayTitle}</Text>
-                            <View style={styles.progressRow}>
-                                <View style={styles.progressBarContainer}>
-                                    <ProgressBar
-                                        progress={progress}
-                                        color={iconColor}
-                                        style={styles.miniProgressBar}
-                                    />
+                            <Text variant="titleLarge" style={styles.subjectName}>{displayTitle}</Text>
+                            <View style={styles.statsRow}>
+                                <View style={styles.statItem}>
+                                    <MaterialCommunityIcons name="book-open-outline" size={16} color={isDark ? '#94A3B8' : '#6B7280'} />
+                                    <Text style={styles.statText}>8 Chapters</Text>
                                 </View>
-                                <Text variant="bodySmall" style={styles.progressText}>{Math.round(progress * 100)}%</Text>
+                                <View style={styles.statDivider} />
+                                <View style={styles.statItem}>
+                                    <MaterialCommunityIcons name="progress-check" size={16} color={gradient[0]} />
+                                    <Text style={[styles.statText, { color: gradient[0] }]}>{Math.round(progress * 100)}% Done</Text>
+                                </View>
                             </View>
                         </View>
 
+                        {/* Chevron */}
                         <View style={styles.chevronContainer}>
-                            <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+                            <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#475569' : '#CBD5E1'} />
                         </View>
-                    </Surface>
+                    </LinearGradient>
                 </TouchableOpacity>
             </Animated.View>
         );
@@ -212,10 +174,13 @@ const LearnDashboardScreen = ({ navigation }: any) => {
             <View style={styles.container}>
                 <StatusBar barStyle="light-content" backgroundColor="#6A5AE0" />
                 <LinearGradient
-                    colors={['#6A5AE0', '#8B7AFF']}
-                    style={[styles.headerBackground, { paddingTop: insets.top + spacing.md, paddingBottom: 40 }]}
+                    colors={['#6366F1', '#4F46E5']}
+                    style={[styles.headerBackground, { paddingTop: insets.top + spacing.lg, paddingBottom: 40 }]}
                 >
-                    {renderHeader()}
+                    <View style={styles.modernHeader}>
+                        <Text variant="headlineLarge" style={styles.modernTitle}>Learn</Text>
+                        <Text variant="bodyMedium" style={styles.modernSubtitle}>Select your class to begin</Text>
+                    </View>
                 </LinearGradient>
 
                 <View style={[styles.contentContainer, { justifyContent: 'center', alignItems: 'center', padding: spacing.xl }]}>
@@ -255,117 +220,132 @@ const LearnDashboardScreen = ({ navigation }: any) => {
             <View style={styles.contentContainer}>
                 <ScrollView
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 }]}
                 >
-                    {/* Header Background */}
-                    <LinearGradient
-                        colors={['#6A5AE0', '#8B7AFF']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[styles.headerBackground, { paddingTop: insets.top + spacing.md }]}
-                    >
-                        {renderHeader()}
-                        <View style={styles.headerContent}>
-                            {renderDailyGoal()}
-                        </View>
-                    </LinearGradient>
-
-                    {/* Explore Section */}
-                    <View style={styles.sectionHeader}>
-                        <Text variant="titleLarge" style={styles.sectionTitle}>Explore</Text>
-                    </View>
-
-                    <View style={styles.exploreContainer}>
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('ModelList')}
-                            activeOpacity={0.9}
-                        >
-                            <Surface style={styles.exploreCard} elevation={2}>
-                                <LinearGradient
-                                    colors={['#E0F7FA', '#B2EBF2']}
-                                    style={styles.exploreGradient}
-                                >
-                                    <View style={styles.exploreContent}>
-                                        <View style={styles.exploreTextContainer}>
-                                            <Text variant="titleMedium" style={styles.exploreTitle}>Science Interactive</Text>
-                                            <Text variant="bodySmall" style={styles.exploreSubtitle}>Explore 3D Models</Text>
-                                        </View>
-                                        <View style={styles.exploreIconContainer}>
-                                            <MaterialCommunityIcons name="cube-outline" size={32} color="#00BCD4" />
-                                        </View>
-                                    </View>
-                                </LinearGradient>
-                            </Surface>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* My Subjects Section */}
-                    <View style={styles.sectionHeader}>
-                        <Text variant="titleLarge" style={styles.sectionTitle}>Class {selectedClass} Subjects</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-                            <Text variant="bodyMedium" style={styles.changeClassText}>Change Class</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.filtersContainer}>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{ paddingHorizontal: spacing.lg + 4 }}
-                        >
-                            {['All', 'Maths', 'Science', 'Languages'].map((f) => (
-                                <TouchableOpacity
-                                    key={f}
-                                    onPress={() => setFilter(f)}
-                                    activeOpacity={0.8}
-                                    style={[
-                                        styles.filterChip,
-                                        filter === f && styles.filterChipActive
-                                    ]}
-                                >
-                                    <Text style={[
-                                        styles.filterChipText,
-                                        filter === f && styles.filterChipTextActive
-                                    ]}>
-                                        {f}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* Recommended Section */}
-                    <View style={styles.highlightsContainer}>
-                        <Text variant="titleMedium" style={styles.sectionSubtitle}>Recommended for You</Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={{ paddingHorizontal: spacing.lg + 4, paddingTop: spacing.sm + 2 }}
-                        >
-                            {[1, 2, 3].map((i) => (
-                                <Animated.View key={i} entering={FadeInRight.delay(i * 100).duration(400)}>
-                                    <Surface style={styles.highlightCard} elevation={2}>
-                                        <View style={styles.highlightIcon}>
-                                            <MaterialCommunityIcons name="star-face" size={24} color="#FF9A62" />
-                                        </View>
-                                        <View style={styles.highlightContent}>
-                                            <Text variant="labelLarge" style={styles.highlightTitle}>Daily Challenge</Text>
-                                            <Text variant="bodySmall" style={styles.highlightSubtitle}>Earn 50 XP</Text>
-                                        </View>
-                                    </Surface>
-                                </Animated.View>
-                            ))}
-                        </ScrollView>
-                    </View>
-
-                    {/* Subjects List */}
-                    <FlatList
-                        data={subjects}
-                        renderItem={renderSubjectItem}
-                        keyExtractor={(item) => item._id}
-                        scrollEnabled={false}
-                        contentContainerStyle={styles.listContent}
+                    {/* Unified Header */}
+                    <UnifiedHeader
+                        title="My Subjects"
+                        subtitle={`Class ${selectedClass}`}
+                        icon="book-open-page-variant"
                     />
+
+                    {/* Content Area with Overlap */}
+                    <View style={[styles.contentContainer, { marginTop: -40 }]}>
+
+
+
+
+
+
+
+
+
+                        {/* Subjects Grid */}
+                        <View style={styles.gridContainer}>
+                            {subjects.map((item, index) => {
+                                const displayTitle = item.name;
+                                const displayIcon = item.icon || 'book-open-variant';
+                                const progress = item.progress || 0;
+                                const gradient = getSubjectGradient(item.name);
+
+                                const handlePress = () => {
+                                    navigation.navigate('ChapterList', { subjectId: item._id, subjectName: item.name });
+                                };
+
+                                return (
+                                    <Animated.View
+                                        key={item._id}
+                                        entering={FadeInDown.delay(index * 80).duration(600).springify()}
+                                        style={[styles.subjectCardWrapper, { width: isMobile ? '48%' : '48%' }]}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={handlePress}
+                                            activeOpacity={0.9}
+                                            style={styles.subjectCard}
+                                        >
+                                            <LinearGradient
+                                                colors={isDark ? ['#1E293B', '#1E293B'] : ['#EEF2FF', '#EEF2FF']}
+                                                style={[
+                                                    styles.subjectCardContent,
+                                                    isMobile && {
+                                                        flexDirection: 'column',
+                                                        padding: 12,
+                                                        height: 160,
+                                                        justifyContent: 'center'
+                                                    }
+                                                ]}
+                                            >
+                                                {/* Icon with gradient background */}
+                                                <LinearGradient
+                                                    colors={gradient as any}
+                                                    style={[
+                                                        styles.iconBox,
+                                                        isMobile && {
+                                                            width: 48,
+                                                            height: 48,
+                                                            marginRight: 0,
+                                                            marginBottom: 12,
+                                                            borderRadius: 14
+                                                        }
+                                                    ]}
+                                                    start={{ x: 0, y: 0 }}
+                                                    end={{ x: 1, y: 1 }}
+                                                >
+                                                    <MaterialCommunityIcons name={displayIcon} size={isMobile ? 24 : 36} color="#fff" />
+                                                </LinearGradient>
+
+                                                {/* Subject Info */}
+                                                <View style={[styles.subjectInfo, isMobile && { alignItems: 'center', width: '100%' }]}>
+                                                    <Text
+                                                        variant="titleLarge"
+                                                        style={[
+                                                            styles.subjectName,
+                                                            isMobile && {
+                                                                fontSize: 14,
+                                                                textAlign: 'center',
+                                                                marginBottom: 4
+                                                            }
+                                                        ]}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {displayTitle}
+                                                    </Text>
+
+                                                    {!isMobile && (
+                                                        <View style={styles.statsRow}>
+                                                            <View style={styles.statItem}>
+                                                                <MaterialCommunityIcons name="book-open-outline" size={16} color={isDark ? '#94A3B8' : '#6B7280'} />
+                                                                <Text style={styles.statText}>8 Chapters</Text>
+                                                            </View>
+                                                            <View style={styles.statDivider} />
+                                                            <View style={styles.statItem}>
+                                                                <MaterialCommunityIcons name="progress-check" size={16} color={gradient[0]} />
+                                                                <Text style={[styles.statText, { color: gradient[0] }]}>{Math.round(progress * 100)}% Done</Text>
+                                                            </View>
+                                                        </View>
+                                                    )}
+
+                                                    {isMobile && (
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                                            <MaterialCommunityIcons name="progress-check" size={12} color={gradient[0]} />
+                                                            <Text style={{ fontSize: 10, color: gradient[0], fontWeight: '700' }}>{Math.round(progress * 100)}%</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
+
+                                                {/* Chevron - Hide on Mobile Bento */}
+                                                {!isMobile && (
+                                                    <View style={styles.chevronContainer}>
+                                                        <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#475569' : '#CBD5E1'} />
+                                                    </View>
+                                                )}
+                                            </LinearGradient>
+                                        </TouchableOpacity>
+                                    </Animated.View>
+                                );
+                            })}
+                        </View>
+                    </View>
                 </ScrollView>
             </View>
         </View>
@@ -375,17 +355,36 @@ const LearnDashboardScreen = ({ navigation }: any) => {
 const createStyles = (isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#0F172A' : '#F5F5F7',
+        backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
     },
     headerBackground: {
         paddingBottom: spacing.xxl + 12,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
-        shadowColor: '#6A5AE0',
+        shadowColor: '#6366F1',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.25,
         shadowRadius: 15,
         elevation: 10,
+    },
+    modernHeader: {
+        paddingHorizontal: spacing.xl,
+        paddingBottom: spacing.xl,
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
+    },
+    modernTitle: {
+        fontWeight: '800',
+        color: '#fff',
+        fontSize: 32,
+        letterSpacing: -1,
+        marginBottom: spacing.xs - 2,
+    },
+    modernSubtitle: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 15,
+        fontWeight: '500',
     },
     headerContainer: {
         paddingHorizontal: spacing.lg + 4,
@@ -393,9 +392,15 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
     },
     headerContent: {
         paddingHorizontal: spacing.lg + 4,
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
     },
     contentContainer: {
         flex: 1,
@@ -533,6 +538,9 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         paddingHorizontal: spacing.lg + 4,
         marginBottom: spacing.md + 4,
         marginTop: spacing.lg,
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
     },
     sectionTitle: {
         fontWeight: '800',
@@ -631,40 +639,68 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         fontSize: 13,
     },
     subjectCardWrapper: {
-        marginBottom: spacing.md + 2,
-        paddingHorizontal: spacing.lg + 4,
+        marginBottom: spacing.lg,
+        paddingHorizontal: spacing.xl,
     },
     subjectCard: {
         borderRadius: 20,
+        shadowColor: isDark ? '#000' : '#1E293B',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.5 : 0.08,
+        shadowRadius: 12,
+        elevation: 3,
     },
     subjectCardContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: spacing.md + 4,
+        padding: spacing.xl,
         borderRadius: 20,
-        backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.07,
-        shadowRadius: 10,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: isDark ? '#334155' : '#E2E8F0',
     },
     iconBox: {
-        width: 60,
-        height: 60,
-        borderRadius: 16,
+        width: 72,
+        height: 72,
+        borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: spacing.md,
+        marginRight: spacing.lg,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
     subjectInfo: {
         flex: 1,
     },
     subjectName: {
-        fontWeight: '700',
-        marginBottom: 8,
-        fontSize: 17,
-        color: '#1A1A1A',
+        fontWeight: '800',
+        marginBottom: spacing.sm + 2,
+        fontSize: 19,
+        color: isDark ? '#F8FAFC' : '#0F172A',
+        letterSpacing: -0.5,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    statText: {
+        fontSize: 13,
+        color: isDark ? '#94A3B8' : '#64748B',
+        fontWeight: '600',
+    },
+    statDivider: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: isDark ? '#475569' : '#CBD5E1',
+        marginHorizontal: spacing.sm,
     },
     progressRow: {
         flexDirection: 'row',
@@ -674,6 +710,16 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         flex: 1,
         marginRight: 12,
     },
+    progressBarTrack: {
+        height: 6,
+        backgroundColor: isDark ? '#334155' : '#F3F4F6',
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 3,
+    },
     miniProgressBar: {
         height: 7,
         borderRadius: 4,
@@ -681,9 +727,10 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     },
     progressText: {
         fontSize: 13,
-        color: '#666',
+        color: isDark ? '#94A3B8' : '#6B7280',
         fontWeight: '700',
-        width: 35,
+        minWidth: 38,
+        textAlign: 'right',
     },
     chevronContainer: {
         width: 32,
@@ -694,9 +741,21 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     listContent: {
         paddingBottom: spacing.xl,
     },
+    gridContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        paddingHorizontal: spacing.xl, // Match subjectCardWrapper padding
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
+    },
     exploreContainer: {
         paddingHorizontal: spacing.lg + 4,
         marginBottom: spacing.lg + 4,
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
     },
     exploreCard: {
         borderRadius: 20,

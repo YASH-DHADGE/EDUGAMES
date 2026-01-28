@@ -12,6 +12,7 @@ import api from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { gradients, spacing, borderRadius, shadows } from '../theme';
 import { useTranslation } from '../i18n';
+import UnifiedHeader from '../components/UnifiedHeader';
 
 const TASKS_CACHE_KEY = 'student_tasks_cache';
 
@@ -19,11 +20,152 @@ const StudentTasksScreen = () => {
     const navigation = useNavigation();
     const { user } = useAuth();
     const { t } = useTranslation();
-    const { theme } = useAppTheme();
+    const { isDark } = useAppTheme();
     const { isOffline } = useSync();
     const [tasks, setTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    const styles = StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: isDark ? '#0F172A' : '#EEF2FF',
+        },
+        scrollContent: {
+            paddingTop: spacing.lg,
+            paddingBottom: 100,
+        },
+        headerBackground: {
+            paddingTop: 60,
+            paddingBottom: spacing.xl,
+        },
+        header: {
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.md,
+        },
+        title: {
+            fontSize: 28,
+            fontWeight: '700',
+            color: '#fff',
+            letterSpacing: -0.5,
+        },
+        subtitle: {
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: 14,
+            marginTop: spacing.xs,
+        },
+        offlineBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(239, 68, 68, 0.9)',
+            paddingHorizontal: spacing.md,
+            paddingVertical: spacing.xs + 2,
+            borderRadius: 12,
+            gap: spacing.xs,
+            marginTop: spacing.sm,
+            alignSelf: 'flex-start',
+        },
+        offlineText: {
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        list: {
+            paddingHorizontal: spacing.lg,
+        },
+        taskCard: {
+            marginBottom: spacing.md,
+            padding: spacing.lg + 2,
+            backgroundColor: isDark ? '#1E293B' : '#EEF2FF',
+            borderRadius: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isDark ? 0.4 : 0.06,
+            shadowRadius: 8,
+            elevation: 2,
+            borderWidth: 1,
+            borderColor: isDark ? '#334155' : '#F0F0F0',
+        },
+        taskHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: spacing.md,
+        },
+        taskIcon: {
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginRight: spacing.md,
+            backgroundColor: isDark ? '#334155' : '#EEF2FF',
+        },
+        taskInfo: {
+            flex: 1,
+        },
+        taskTitle: {
+            fontSize: 16,
+            fontWeight: '700',
+            marginBottom: 4,
+            color: isDark ? '#F1F5F9' : '#111827',
+            letterSpacing: -0.2,
+        },
+        taskDate: {
+            fontSize: 12,
+            color: isDark ? '#94A3B8' : '#6B7280',
+        },
+        statusBadge: {
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+        },
+        statusText: {
+            fontSize: 10,
+            fontWeight: '700',
+            letterSpacing: 0.5,
+        },
+        actionButton: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: spacing.md + 2,
+            borderRadius: 12,
+            gap: spacing.sm,
+        },
+        actionButtonText: {
+            color: '#fff',
+            fontWeight: '700',
+            fontSize: 14,
+        },
+        emptyState: {
+            alignItems: 'center',
+            marginTop: 60,
+            paddingHorizontal: spacing.lg,
+        },
+        emptyIconContainer: {
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            backgroundColor: isDark ? '#1E293B' : '#EEF2FF',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: spacing.lg,
+            borderWidth: 1,
+            borderColor: isDark ? '#334155' : '#F0F0F0',
+        },
+        emptyText: {
+            color: isDark ? '#F1F5F9' : '#111827',
+            fontSize: 20,
+            fontWeight: '700',
+            marginTop: spacing.md,
+        },
+        emptySubtext: {
+            color: isDark ? '#94A3B8' : '#6B7280',
+            fontSize: 14,
+            marginTop: spacing.xs,
+            textAlign: 'center',
+        },
+    });
 
     useFocusEffect(
         React.useCallback(() => {
@@ -75,9 +217,9 @@ const StudentTasksScreen = () => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed': return theme.colors.success;
-            case 'pending': return theme.colors.warning;
-            default: return theme.colors.textSecondary;
+            case 'completed': return '#10B981';
+            case 'pending': return '#F59E0B';
+            default: return '#6B7280';
         }
     };
 
@@ -97,15 +239,23 @@ const StudentTasksScreen = () => {
             title = task.title;
         }
 
+        const iconColorMap: Record<string, string> = {
+            'Science': '#10B981',
+            'Mathematics': '#F59E0B',
+            'English': '#8B5CF6',
+            'Computer': '#3B82F6',
+        };
+        const iconColor = iconColorMap[task.subject] || '#6366F1';
+
         return (
-            <CustomCard key={index} style={[styles.taskCard, { backgroundColor: theme.colors.surface }]}>
+            <View key={index} style={[styles.taskCard]}>
                 <View style={styles.taskHeader}>
-                    <View style={[styles.taskIcon, { backgroundColor: theme.colors.primaryContainer }]}>
-                        <Ionicons name={typeIcon as any} size={24} color={theme.colors.primary} />
+                    <View style={[styles.taskIcon]}>
+                        <Ionicons name={typeIcon as any} size={26} color={iconColor} />
                     </View>
                     <View style={styles.taskInfo}>
-                        <Text style={[styles.taskTitle, { color: theme.colors.onSurface }]}>{typeLabel}: {title}</Text>
-                        <Text style={[styles.taskDate, { color: theme.colors.textSecondary }]}>Assigned: {new Date(task.assignedAt).toLocaleDateString()}</Text>
+                        <Text style={[styles.taskTitle]}>{typeLabel}: {title}</Text>
+                        <Text style={[styles.taskDate]}>Assigned: {new Date(task.assignedAt).toLocaleDateString()}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) + '20' }]}>
                         <Text style={[styles.statusText, { color: getStatusColor(task.status) }]}>
@@ -135,12 +285,11 @@ const StudentTasksScreen = () => {
                                     params: {
                                         chapterId: task.chapterId,
                                         title: task.title,
-                                        content: task.content, // Assuming content is passed directly or fetched
+                                        content: task.content,
                                         subject: task.subject
                                     }
                                 });
                             } else {
-                                // Default/Chapter navigation
                                 const subjectCodeMap: Record<string, string> = {
                                     'Science': 'sci',
                                     'Mathematics': 'math',
@@ -164,7 +313,7 @@ const StudentTasksScreen = () => {
                         }}
                     >
                         <LinearGradient
-                            colors={gradients.primary}
+                            colors={['#6366F1', '#4F46E5']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={styles.actionButton}
@@ -177,148 +326,52 @@ const StudentTasksScreen = () => {
                     </TouchableOpacity>
                 )
                 }
-            </CustomCard >
+            </View>
         );
     };
 
     return (
-        <GradientBackground>
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>{t('tasks.title')}</Text>
-                    {isOffline && (
-                        <View style={styles.offlineBadge}>
-                            <Ionicons name="cloud-offline" size={16} color="#fff" />
-                            <Text style={styles.offlineText}>Offline Mode</Text>
-                        </View>
-                    )}
-                </View>
+        <View style={styles.container}>
+            <UnifiedHeader
+                title={t('tasks.title')}
+                subtitle="Track your assignments"
+                icon="checkbox-marked-circle-outline"
+            />
 
+            {/* Content with Overlap */}
+            <View style={{ flex: 1, marginTop: -40 }}>
                 {loading ? (
-                    <ActivityIndicator size="large" color="#fff" style={{ marginTop: 40 }} />
+                    <ActivityIndicator size="large" color={isDark ? '#6366F1' : '#4F46E5'} style={{ marginTop: 40 }} />
                 ) : (
                     <ScrollView
-                        contentContainerStyle={styles.list}
+                        contentContainerStyle={[styles.scrollContent, styles.list, { paddingBottom: 120 }]}
                         refreshControl={
-                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+                            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#6366F1' : '#4F46E5'} />
                         }
                     >
+                        {isOffline && (
+                            <View style={styles.offlineBadge}>
+                                <Ionicons name="cloud-offline" size={14} color="#fff" />
+                                <Text style={styles.offlineText}>Offline Mode</Text>
+                            </View>
+                        )}
                         {tasks.length > 0 ? (
                             tasks.map((task, index) => renderTaskItem(task, index))
                         ) : (
                             <View style={styles.emptyState}>
-                                <Ionicons name="checkmark-circle-outline" size={60} color="rgba(255,255,255,0.5)" />
+                                <View style={styles.emptyIconContainer}>
+                                    <Ionicons name="checkmark-circle-outline" size={50} color={isDark ? '#6366F1' : '#4F46E5'} />
+                                </View>
                                 <Text style={styles.emptyText}>{t('tasks.noTasks')}</Text>
-                                <Text style={styles.emptySubtext}>Great job staying on top of your work.</Text>
+                                <Text style={styles.emptySubtext}>Great job staying on top of your work!</Text>
                             </View>
                         )}
                     </ScrollView>
                 )}
             </View>
-        </GradientBackground>
+        </View>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: spacing.xl,
-        paddingTop: spacing.xxl * 2.5, // Header space
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: spacing.xl,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    offlineBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(239, 68, 68, 0.8)', // Red for offline
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.lg,
-        gap: spacing.xs,
-    },
-    offlineText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    list: {
-        paddingBottom: 100, // Space for tab bar
-    },
-    taskCard: {
-        marginBottom: spacing.lg,
-        padding: spacing.lg,
-        ...shadows.base,
-    },
-    taskHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: spacing.lg,
-    },
-    taskIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: borderRadius.full,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: spacing.lg,
-    },
-    taskInfo: {
-        flex: 1,
-    },
-    taskTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: 2,
-    },
-    taskDate: {
-        fontSize: 12,
-    },
-    statusBadge: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
-        borderRadius: borderRadius.sm,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    actionButton: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: spacing.md,
-        borderRadius: borderRadius.lg,
-        gap: spacing.sm,
-    },
-    actionButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    emptyState: {
-        alignItems: 'center',
-        marginTop: 60,
-    },
-    emptyText: {
-        color: '#fff',
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginTop: spacing.lg,
-    },
-    emptySubtext: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 14,
-        marginTop: spacing.xs,
-    },
-});
 
 export default StudentTasksScreen;

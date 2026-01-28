@@ -103,26 +103,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const syncWithBackend = async (authToken: string) => {
         try {
-            // Sync XP
-            const storedXP = await getData('user_xp');
-            const storedLevel = await getData('user_level');
-            if (storedXP) {
-                await api.put('/xp/sync', {
-                    xp: parseInt(storedXP),
-                    level: storedLevel ? parseInt(storedLevel) : Math.floor(parseInt(storedXP) / 100) + 1
-                }, {
-                    headers: { Authorization: `Bearer ${authToken}` }
-                });
-            }
-
-            // Daily streak check-in
-            const response = await api.post('/streak/checkin', {}, {
+            // Fetch user profile to get latest XP and level from database
+            const profileResponse = await api.get('/auth/profile', {
                 headers: { Authorization: `Bearer ${authToken}` }
             });
 
-            if (response.data && !response.data.alreadyCheckedIn) {
-                setStreak(response.data.streak);
-                await storeData('user_streak', response.data.streak.toString());
+            if (profileResponse.data) {
+                const { xp: serverXp, level: serverLevel, streak: serverStreak } = profileResponse.data;
+
+                // Update local state with server values
+                if (serverXp !== undefined) {
+                    setXP(serverXp);
+                    await storeData('user_xp', serverXp.toString());
+                }
+
+                if (serverLevel !== undefined) {
+                    setLevel(serverLevel);
+                    await storeData('user_level', serverLevel.toString());
+                }
+
+                if (serverStreak !== undefined) {
+                    setStreak(serverStreak);
+                    await storeData('user_streak', serverStreak.toString());
+                }
+            }
+
+            // Daily streak check-in
+            const streakResponse = await api.post('/streak/checkin', {}, {
+                headers: { Authorization: `Bearer ${authToken}` }
+            });
+
+            if (streakResponse.data && !streakResponse.data.alreadyCheckedIn) {
+                setStreak(streakResponse.data.streak);
+                await storeData('user_streak', streakResponse.data.streak.toString());
             }
         } catch (error: any) {
             console.log('Backend sync failed (offline mode):', error);
@@ -140,13 +153,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Call the real backend API - role determined by backend from database
             const response = await api.post(ENDPOINTS.LOGIN, { email, password });
 
-            const { _id, name, email: userEmail, role: userRole, status: userStatus, xp: userXp, streak: userStreak, selectedClass: userClass, avatar: userAvatar, themeColor, token: authToken } = response.data;
+            const { _id, name, email: userEmail, role: userRole, status: userStatus, xp: userXp, level: userLevel, streak: userStreak, selectedClass: userClass, avatar: userAvatar, themeColor, token: authToken } = response.data;
 
             const userData = { _id, name, email: userEmail, role: userRole, status: userStatus, selectedClass: userClass, avatar: userAvatar, themeColor };
 
             await storeData(STORAGE_KEYS.USER_DATA, userData);
             await storeData(STORAGE_KEYS.USER_TOKEN, authToken);
             await storeData('user_xp', (userXp || 0).toString());
+            await storeData('user_level', (userLevel || 1).toString());
             await storeData('user_streak', (userStreak || 0).toString());
             await removeData('is_guest');
 
@@ -163,6 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(authToken);
             setIsGuest(false);
             setXP(userXp || 0);
+            setLevel(userLevel || 1);
             setStreak(userStreak || 0);
         } catch (error) {
             console.error('Login failed', error);

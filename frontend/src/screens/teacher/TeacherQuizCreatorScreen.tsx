@@ -5,12 +5,15 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const { width } = Dimensions.get('window');
 
 const TeacherQuizCreatorScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     const routes = navigation.getState()?.routes;
     const quizCreatorRoute = routes?.find((r: any) => r.name === 'TeacherQuizCreator');
@@ -79,9 +82,8 @@ const TeacherQuizCreatorScreen = () => {
                     subject,
                     questions
                 });
-                Alert.alert('Success', 'Quiz updated successfully!', [
-                    { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
+                setSuccessMessage('Quiz updated successfully!');
+                setShowSuccessModal(true);
             } else {
                 await api.post('/teacher/quiz', {
                     title,
@@ -90,9 +92,8 @@ const TeacherQuizCreatorScreen = () => {
                     subject,
                     questions
                 });
-                Alert.alert('Success', 'Quiz Created Successfully', [
-                    { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
+                setSuccessMessage('Quiz Created Successfully!');
+                setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Failed to save quiz:', error);
@@ -100,6 +101,11 @@ const TeacherQuizCreatorScreen = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSuccessClose = () => {
+        setShowSuccessModal(false);
+        navigation.goBack();
     };
 
     return (
@@ -288,7 +294,16 @@ const TeacherQuizCreatorScreen = () => {
                 </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
+                <View style={{ height: 40 }} />
             </ScrollView>
+
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Success!"
+                message={successMessage}
+                onClose={handleSuccessClose}
+                buttonText="Back to Dashboard"
+            />
         </View>
     );
 };

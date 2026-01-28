@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from 'react-native';
 import { Text, ActivityIndicator, Surface, Searchbar, Chip } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -26,9 +25,24 @@ interface PendingUser {
 const AdminDashboardScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
     const { isDark } = useAppTheme();
-    const styles = createStyles(isDark);
+
+    // Professional Theme Colors
+    const theme = {
+        primary: '#0F172A', // Slate 900
+        secondary: '#334155', // Slate 700
+        accent: '#2563EB', // Blue 600
+        background: isDark ? '#0F172A' : '#F1F5F9', // Slate 900 or Slate 100
+        cardUser: isDark ? '#1E293B' : '#FFFFFF',
+        text: isDark ? '#F8FAFC' : '#1E293B',
+        textSecondary: isDark ? '#94A3B8' : '#64748B',
+        success: '#10B981',
+        warning: '#F59E0B',
+        info: '#3B82F6',
+    };
+
+    const styles = createStyles(theme, insets);
 
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -96,170 +110,132 @@ const AdminDashboardScreen = () => {
 
     return (
         <View style={styles.container}>
+            {/* Top Navigation Bar */}
+            <View style={styles.topNav}>
+                <View style={styles.navLeft}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+                        <Ionicons name="arrow-back" size={24} color={theme.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.navTitle}>Admin Panel</Text>
+                </View>
+                <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+                    <Text style={styles.logoutText}>Logout</Text>
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                </TouchableOpacity>
+            </View>
+
             <ScrollView
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                {/* Header */}
-                <LinearGradient
-                    colors={['#F59E0B', '#D97706', '#B45309']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.header, { paddingTop: insets.top + 10 }]}
-                >
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
+                {/* Dashboard Header */}
+                <View style={styles.headerSection}>
+                    <Text style={styles.pageTitle}>Overview</Text>
+                    <Text style={styles.pageSubtitle}>Manage pending approvals and platform activity.</Text>
+                </View>
 
-                    <View style={styles.headerContent}>
-                        <MaterialCommunityIcons name="account-clock" size={48} color="#fff" />
-                        <Text style={styles.headerTitle}>Pending Approvals</Text>
-                        <Text style={styles.headerSubtitle}>
-                            {pendingUsers.length} {pendingUsers.length === 1 ? 'request' : 'requests'} waiting for review
-                        </Text>
-                    </View>
-
-                    <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                        <Ionicons name="log-out-outline" size={22} color="#fff" />
-                    </TouchableOpacity>
-                </LinearGradient>
-
-                {/* Stats Cards */}
-                <Animated.View entering={FadeInDown.delay(100).duration(600)}>
-                    <View style={styles.statsRow}>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <View style={[styles.statIconContainer, { backgroundColor: '#FEF3C7' }]}>
-                                <MaterialCommunityIcons name="account-group" size={24} color="#F59E0B" />
-                            </View>
+                {/* Stats Grid */}
+                <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.statsGrid}>
+                    <View style={styles.statCard}>
+                        <View style={[styles.statIconBox, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                            <MaterialCommunityIcons name="account-clock" size={24} color="#F59E0B" />
+                        </View>
+                        <View>
                             <Text style={styles.statValue}>{roleCounts.all}</Text>
-                            <Text style={styles.statLabel}>Total Pending</Text>
-                        </Surface>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <View style={[styles.statIconContainer, { backgroundColor: '#DBEAFE' }]}>
-                                <MaterialCommunityIcons name="school" size={24} color="#3B82F6" />
-                            </View>
+                            <Text style={styles.statLabel}>Pending</Text>
+                        </View>
+                    </View>
+                    <View style={styles.statCard}>
+                        <View style={[styles.statIconBox, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                            <MaterialCommunityIcons name="school" size={24} color="#3B82F6" />
+                        </View>
+                        <View>
                             <Text style={styles.statValue}>{roleCounts.student}</Text>
                             <Text style={styles.statLabel}>Students</Text>
-                        </Surface>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <View style={[styles.statIconContainer, { backgroundColor: '#D1FAE5' }]}>
-                                <MaterialCommunityIcons name="human-male-board" size={24} color="#10B981" />
-                            </View>
+                        </View>
+                    </View>
+                    <View style={styles.statCard}>
+                        <View style={[styles.statIconBox, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                            <MaterialCommunityIcons name="human-male-board" size={24} color="#10B981" />
+                        </View>
+                        <View>
                             <Text style={styles.statValue}>{roleCounts.teacher}</Text>
                             <Text style={styles.statLabel}>Teachers</Text>
-                        </Surface>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <View style={[styles.statIconContainer, { backgroundColor: '#EDE9FE' }]}>
-                                <MaterialCommunityIcons name="domain" size={24} color="#8B5CF6" />
-                            </View>
+                        </View>
+                    </View>
+                    <View style={styles.statCard}>
+                        <View style={[styles.statIconBox, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                            <MaterialCommunityIcons name="domain" size={24} color="#8B5CF6" />
+                        </View>
+                        <View>
                             <Text style={styles.statValue}>{roleCounts.institute}</Text>
                             <Text style={styles.statLabel}>Institutes</Text>
-                        </Surface>
+                        </View>
                     </View>
                 </Animated.View>
 
-                {/* Search and Filter */}
-                <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+                {/* Action Bar */}
+                <View style={styles.actionBar}>
                     <Searchbar
-                        placeholder="Search by name or email..."
+                        placeholder="Search users..."
                         onChangeText={setSearchQuery}
                         value={searchQuery}
                         style={styles.searchBar}
                         inputStyle={styles.searchInput}
-                        icon={() => <MaterialCommunityIcons name="magnify" size={22} color="#999" />}
+                        iconColor={theme.textSecondary}
+                        placeholderTextColor={theme.textSecondary}
                     />
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.chipScroll}
-                        contentContainerStyle={styles.chipContainer}
-                    >
-                        <Chip
-                            mode={filterRole === null ? 'flat' : 'outlined'}
-                            selected={filterRole === null}
-                            onPress={() => setFilterRole(null)}
-                            style={[styles.chip, filterRole === null && styles.chipActive]}
-                            textStyle={filterRole === null ? styles.chipTextActive : styles.chipText}
-                        >
-                            All ({roleCounts.all})
-                        </Chip>
-                        <Chip
-                            mode={filterRole === 'student' ? 'flat' : 'outlined'}
-                            selected={filterRole === 'student'}
-                            onPress={() => setFilterRole('student')}
-                            style={[styles.chip, filterRole === 'student' && styles.chipStudent]}
-                            textStyle={filterRole === 'student' ? styles.chipTextActive : styles.chipText}
-                        >
-                            Students ({roleCounts.student})
-                        </Chip>
-                        <Chip
-                            mode={filterRole === 'teacher' ? 'flat' : 'outlined'}
-                            selected={filterRole === 'teacher'}
-                            onPress={() => setFilterRole('teacher')}
-                            style={[styles.chip, filterRole === 'teacher' && styles.chipTeacher]}
-                            textStyle={filterRole === 'teacher' ? styles.chipTextActive : styles.chipText}
-                        >
-                            Teachers ({roleCounts.teacher})
-                        </Chip>
-                        <Chip
-                            mode={filterRole === 'institute' ? 'flat' : 'outlined'}
-                            selected={filterRole === 'institute'}
-                            onPress={() => setFilterRole('institute')}
-                            style={[styles.chip, filterRole === 'institute' && styles.chipInstitute]}
-                            textStyle={filterRole === 'institute' ? styles.chipTextActive : styles.chipText}
-                        >
-                            Institutes ({roleCounts.institute})
-                        </Chip>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContainer}>
+                        {['student', 'teacher', 'institute'].map((role) => (
+                            <TouchableOpacity
+                                key={role}
+                                style={[
+                                    styles.filterChip,
+                                    filterRole === role && { backgroundColor: theme.accent }
+                                ]}
+                                onPress={() => setFilterRole(filterRole === role ? null : role)}
+                            >
+                                <Text style={[
+                                    styles.filterText,
+                                    filterRole === role && { color: '#fff' }
+                                ]}>
+                                    {role.charAt(0).toUpperCase() + role.slice(1)}s
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </ScrollView>
-                </Animated.View>
+                </View>
 
-                {/* Pending Users List */}
-                <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+                {/* Users List */}
+                <View style={styles.listSection}>
                     <View style={styles.listHeader}>
-                        <Text style={styles.listTitle}>
-                            {filterRole ? `${filterRole.charAt(0).toUpperCase() + filterRole.slice(1)}s` : 'All'} Pending
-                        </Text>
-                        <Text style={styles.listCount}>{filteredUsers.length} results</Text>
+                        <Text style={styles.listTitle}>Approval Requests</Text>
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{filteredUsers.length} New</Text>
+                        </View>
                     </View>
 
                     {loading ? (
-                        <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#F59E0B" />
-                            <Text style={styles.loadingText}>Loading requests...</Text>
+                        <View style={styles.centerContainer}>
+                            <ActivityIndicator size="large" color={theme.accent} />
                         </View>
                     ) : filteredUsers.length === 0 ? (
-                        <Surface style={styles.emptyCard} elevation={2}>
-                            <View style={styles.emptyContent}>
-                                <View style={styles.emptyIconContainer}>
-                                    <MaterialCommunityIcons name="check-decagram" size={64} color="#10B981" />
-                                </View>
-                                <Text style={styles.emptyTitle}>All Caught Up! 🎉</Text>
-                                <Text style={styles.emptyText}>
-                                    {searchQuery || filterRole
-                                        ? 'No matching requests found. Try adjusting your filters.'
-                                        : 'There are no pending approval requests at the moment. Check back later!'}
-                                </Text>
-                                {(searchQuery || filterRole) && (
-                                    <TouchableOpacity
-                                        style={styles.clearButton}
-                                        onPress={() => { setSearchQuery(''); setFilterRole(null); }}
-                                    >
-                                        <Text style={styles.clearButtonText}>Clear Filters</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        </Surface>
+                        <View style={styles.emptyState}>
+                            <MaterialCommunityIcons name="check-all" size={48} color={theme.textSecondary} />
+                            <Text style={styles.emptyText}>No pending requests found</Text>
+                            {(searchQuery || filterRole) && (
+                                <TouchableOpacity onPress={() => { setSearchQuery(''); setFilterRole(null); }}>
+                                    <Text style={styles.linkText}>Clear Filters</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     ) : (
                         filteredUsers.map((user, index) => (
                             <Animated.View
                                 key={user._id}
-                                entering={FadeInUp.delay(100 + index * 50).duration(400)}
+                                entering={FadeInUp.delay(index * 50).duration(400)}
                             >
                                 <PendingUserCard
                                     user={user}
@@ -269,207 +245,201 @@ const AdminDashboardScreen = () => {
                             </Animated.View>
                         ))
                     )}
-                </Animated.View>
+                </View>
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 40 }} />
             </ScrollView>
         </View>
     );
 };
 
-const createStyles = (isDark: boolean) => StyleSheet.create({
+const createStyles = (theme: any, insets: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#0F172A' : '#F5F5F5',
+        backgroundColor: theme.background,
+    },
+    topNav: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingTop: insets.top + 15,
+        paddingBottom: 15,
+        backgroundColor: theme.cardUser,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    navLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    iconBtn: {
+        padding: 4,
+    },
+    navTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: theme.text,
+        letterSpacing: 0.5,
+    },
+    logoutBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderRadius: 8,
+    },
+    logoutText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#EF4444',
     },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 20,
+        padding: 20,
     },
-    header: {
-        paddingHorizontal: 20,
-        paddingBottom: 30,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        position: 'relative',
+    headerSection: {
+        marginBottom: 24,
     },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    headerContent: {
-        alignItems: 'center',
-        paddingVertical: 10,
-    },
-    headerTitle: {
+    pageTitle: {
         fontSize: 28,
         fontWeight: '800',
-        color: '#fff',
-        marginTop: 10,
+        color: theme.text,
+        marginBottom: 4,
     },
-    headerSubtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.9)',
-        marginTop: 5,
+    pageSubtitle: {
+        fontSize: 15,
+        color: theme.textSecondary,
     },
-    logoutButton: {
-        position: 'absolute',
-        top: 60,
-        right: 20,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statsRow: {
+    statsGrid: {
         flexDirection: 'row',
-        marginHorizontal: 16,
-        marginTop: -20,
-        gap: 8,
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 24,
     },
     statCard: {
-        flex: 1,
-        padding: 12,
+        width: (SCREEN_WIDTH - 52) / 2, // 20 padding * 2 + 12 gap = 52
+        backgroundColor: theme.cardUser,
+        padding: 16,
         borderRadius: 16,
+        flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: isDark ? '#1E293B' : '#fff',
+        gap: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
     },
-    statIconContainer: {
+    statIconBox: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
     },
     statValue: {
         fontSize: 20,
-        fontWeight: '800',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
+        fontWeight: '700',
+        color: theme.text,
     },
     statLabel: {
-        fontSize: 10,
-        color: isDark ? '#94A3B8' : '#666',
-        marginTop: 2,
-        textAlign: 'center',
+        fontSize: 12,
+        color: theme.textSecondary,
+        fontWeight: '500',
+    },
+    actionBar: {
+        marginBottom: 20,
     },
     searchBar: {
-        marginHorizontal: 16,
-        marginTop: 20,
+        backgroundColor: theme.cardUser,
         borderRadius: 12,
-        backgroundColor: isDark ? '#1E293B' : '#fff',
-        elevation: 2,
+        elevation: 0,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+        marginBottom: 12,
     },
     searchInput: {
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
+        fontSize: 15,
+        color: theme.text,
     },
-    chipScroll: {
-        marginTop: 12,
-    },
-    chipContainer: {
-        paddingHorizontal: 16,
+    filterContainer: {
+        flexDirection: 'row',
         gap: 8,
     },
-    chip: {
+    filterChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: isDark ? '#1E293B' : '#fff',
+        backgroundColor: theme.cardUser,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
     },
-    chipActive: {
-        backgroundColor: '#F59E0B',
-    },
-    chipStudent: {
-        backgroundColor: '#3B82F6',
-    },
-    chipTeacher: {
-        backgroundColor: '#10B981',
-    },
-    chipInstitute: {
-        backgroundColor: '#8B5CF6',
-    },
-    chipText: {
-        color: isDark ? '#94A3B8' : '#666',
-    },
-    chipTextActive: {
-        color: '#fff',
+    filterText: {
+        fontSize: 13,
         fontWeight: '600',
+        color: theme.textSecondary,
+    },
+    listSection: {
+        marginTop: 4,
     },
     listHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 24,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     listTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
+        color: theme.text,
     },
-    listCount: {
-        fontSize: 14,
-        color: isDark ? '#94A3B8' : '#666',
+    badge: {
+        backgroundColor: theme.accent,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
-    loadingContainer: {
-        padding: 40,
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginTop: 12,
-        color: isDark ? '#94A3B8' : '#666',
-    },
-    emptyCard: {
-        marginHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: isDark ? '#1E293B' : '#fff',
-        overflow: 'hidden',
-    },
-    emptyContent: {
-        alignItems: 'center',
-        padding: 40,
-    },
-    emptyIconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: isDark ? '#064E3B' : '#D1FAE5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    emptyTitle: {
-        fontSize: 22,
+    badgeText: {
+        color: '#fff',
+        fontSize: 12,
         fontWeight: '700',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
-        marginBottom: 10,
+    },
+    centerContainer: {
+        padding: 40,
+        alignItems: 'center',
+    },
+    emptyState: {
+        alignItems: 'center',
+        padding: 40,
+        backgroundColor: theme.cardUser,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.03)',
+        borderStyle: 'dashed',
     },
     emptyText: {
-        fontSize: 15,
-        color: isDark ? '#94A3B8' : '#666',
-        textAlign: 'center',
-        lineHeight: 22,
-        paddingHorizontal: 20,
+        fontSize: 16,
+        color: theme.textSecondary,
+        marginTop: 12,
+        marginBottom: 8,
     },
-    clearButton: {
-        marginTop: 20,
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        backgroundColor: '#F59E0B',
-        borderRadius: 25,
-    },
-    clearButtonText: {
-        color: '#fff',
-        fontWeight: '600',
+    linkText: {
         fontSize: 14,
+        color: theme.accent,
+        fontWeight: '600',
     },
 });
 

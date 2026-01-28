@@ -1,52 +1,70 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, ScrollView, TouchableOpacity, Platform, StatusBar, Image } from 'react-native';
-import { Text, useTheme, Surface } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ImageBackground, Dimensions, Platform, Image, Animated as RNAnimated, Pressable } from 'react-native';
+import { Text, Surface, ProgressBar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/ThemeContext';
-import HomeCard from '../components/HomeCard';
-import CustomButton from '../components/ui/CustomButton';
 import { useResponsive } from '../hooks/useResponsive';
-import Animated, { FadeInDown, FadeInRight, FadeIn } from 'react-native-reanimated';
-import { spacing, gradients, colors, borderRadius } from '../theme';
-import { getStaggerDelay } from '../utils/animations';
-import UserGreetingCard from '../components/UserGreetingCard';
-import XPProgressCard from '../components/XPProgressCard';
-import ConfettiAnimation from '../components/ConfettiAnimation';
+import Animated, { FadeInDown, FadeInUp, FadeInRight, withSpring, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useTranslation } from '../i18n';
-import { getAllSimulations, Simulation } from '../data/phetMappings';
-import SimulationViewer from '../components/learn/SimulationViewer';
-import StreakCelebration from '../components/StreakCelebration';
-import OnboardingTutorial from '../components/OnboardingTutorial';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-import MobileHomeHeader from '../components/home/MobileHomeHeader';
-import MobileHomeScreen from './MobileHomeScreen';
+import StreakCelebration from '../components/StreakCelebration';
+import SimulationViewer from '../components/learn/SimulationViewer';
+import { getAllSimulations, Simulation } from '../data/phetMappings';
+import OnboardingTutorial from '../components/OnboardingTutorial';
+import ConfettiAnimation from '../components/ConfettiAnimation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AVATAR_OPTIONS } from '../data/avatars'; // Shared Avatar Data
+import { spacing } from '../theme';
+
+const { width } = Dimensions.get('window');
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const ScaleButton = ({ onPress, style, children, ...props }: any) => {
+    const scale = useSharedValue(1);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }]
+    }));
+
+    const onPressIn = () => {
+        scale.value = withSpring(0.95);
+    };
+
+    const onPressOut = () => {
+        scale.value = withSpring(1);
+    };
+
+    return (
+        <AnimatedPressable
+            onPress={onPress}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            style={[style, animatedStyle]}
+            {...props}
+        >
+            {children}
+        </AnimatedPressable>
+    );
+};
 
 const HomeScreen = ({ navigation }: any) => {
-    const { user, xp, streak } = useAuth();
-    const theme = useTheme();
-    const { isDark } = useAppTheme();
+    const { user, xp, streak, level } = useAuth();
+    const { isDark, toggleTheme } = useAppTheme();
     const insets = useSafeAreaInsets();
-    const { containerStyle, numColumns, isMobile, width } = useResponsive();
+    const { isMobile } = useResponsive();
     const { t } = useTranslation();
-    const [showConfetti, setShowConfetti] = useState(false);
     const [showStreakCelebration, setShowStreakCelebration] = useState(false);
-    const [showOnboarding, setShowOnboarding] = useState(false);
-    const [prevLevel, setPrevLevel] = useState(Math.floor(xp / 100) + 1);
-    const [prevStreak, setPrevStreak] = useState(streak);
     const [selectedSim, setSelectedSim] = useState<Simulation | null>(null);
     const [viewerVisible, setViewerVisible] = useState(false);
 
-    const level = Math.floor(xp / 100) + 1;
-    const xpInLevel = xp % 100;
-    const xpForNextLevel = 100;
-    const featuredSimulations = getAllSimulations().slice(0, 6);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [prevLevel, setPrevLevel] = useState(level);
 
-    const styles = createStyles(isDark);
-
+    // 🎉 Level Up Effect
     useEffect(() => {
         if (level > prevLevel) {
             setShowConfetti(true);
@@ -54,13 +72,7 @@ const HomeScreen = ({ navigation }: any) => {
         }
     }, [level, prevLevel]);
 
-    useEffect(() => {
-        if (streak > prevStreak) {
-            setShowStreakCelebration(true);
-            setPrevStreak(streak);
-        }
-    }, [streak, prevStreak]);
-
+    // 👶 Onboarding Check
     useEffect(() => {
         const checkOnboarding = async () => {
             const completed = await AsyncStorage.getItem('onboardingCompleted');
@@ -71,694 +83,797 @@ const HomeScreen = ({ navigation }: any) => {
         checkOnboarding();
     }, []);
 
-    const MENU_ITEMS = [
+    // Stats Logic - Total XP Progress (using level from database)
+    const xpForCurrentLevel = (level - 1) * 150;
+    const xpForNextLevel = level * 150;
+    const currentLevelXP = xp - xpForCurrentLevel;
+    const xpNeededForLevel = xpForNextLevel - xpForCurrentLevel;
+    const levelProgress = (currentLevelXP / xpNeededForLevel) * 100;
+    const totalXP = xp;
+    const featuredSimulations = getAllSimulations().slice(0, 4);
+
+    // Starry background component
+    const renderStars = () => {
+        const stars = [];
+        const starStyles = getStyles(isDark);
+        for (let i = 0; i < 80; i++) {
+            stars.push(
+                <View
+                    key={i}
+                    style={[
+                        starStyles.star,
+                        {
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            width: Math.random() * 3 + 1,
+                            height: Math.random() * 3 + 1,
+                            opacity: Math.random() * 0.8 + 0.2,
+                        },
+                    ]}
+                />
+            );
+        }
+        return stars;
+    };
+
+    // 🖼️ SIMULATION IMAGE MAPPING
+    const getSimImage = (title: string, subject: string) => {
+        const titleLower = title.toLowerCase();
+        if (titleLower.includes('wave')) return require('../../assets/simulations/waves_intro.png');
+        if (titleLower.includes('buoyancy') && titleLower.includes('basic')) return require('../../assets/simulations/buoyancy_basics.png');
+        if (titleLower.includes('buoyancy')) return require('../../assets/simulations/buoyancy.png');
+        if (titleLower.includes('faraday') || titleLower.includes('electricity') || titleLower.includes('magn')) return require('../../assets/simulations/faraday.png');
+
+        if (titleLower.includes('atom')) return { uri: 'https://images.unsplash.com/photo-1632922267756-9b712429a54f?q=80&w=800&auto=format&fit=crop' };
+        if (titleLower.includes('gene') || titleLower.includes('cell')) return { uri: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?q=80&w=800&auto=format&fit=crop' };
+
+        // Subject Fallbacks
+        if (subject === 'Physics') return { uri: 'https://images.unsplash.com/photo-1636466497217-26a8cbeaf0aa?q=80&w=800&auto=format&fit=crop' };
+        if (subject === 'Chemistry') return { uri: 'https://images.unsplash.com/photo-1603126857599-f6e157fa2fe6?q=80&w=800&auto=format&fit=crop' };
+        if (subject === 'Biology') return { uri: 'https://images.unsplash.com/photo-1530210124550-912dc1381cb8?q=80&w=800&auto=format&fit=crop' };
+        return { uri: 'https://images.unsplash.com/photo-1614728263952-84ea256f9679?q=80&w=800&auto=format&fit=crop' };
+    };
+
+    // Avatar Logic (Matches ProfileScreen)
+    const selectedAvatarId = parseInt(user?.avatar || '1');
+    const currentAvatar = AVATAR_OPTIONS.find(a => a.id === selectedAvatarId) || AVATAR_OPTIONS[0];
+
+    // 🎨 APP THEME COLORS (Deep Violet/Teal/Orange)
+    const THEME_GRADIENT = {
+        primary: ['#6366F1', '#4F46E5'], // Violet
+        secondary: ['#0EA5E9', '#0284C7'], // Sky Blue
+        accent: ['#F59E0B', '#D97706'], // Amber
+        success: ['#10B981', '#059669'], // Emerald
+        rose: ['#EC4899', '#BE185D'], // Pink
+    };
+
+    // 🎮 UNSTRUCTURED BENTO GRID ITEMS
+    const BENTO_ITEMS = [
+        // Row 1: Learn Core
         {
-            id: '1',
-            title: t('home.lessons'),
-            icon: 'book-open-variant',
-            color: '#E8DEF8',
-            gradient: ['#4A00E0', '#8E2DE2'], // Deep Purple
-            onPress: () => navigation.navigate('Learn', { screen: 'LearnDashboard' }),
+            id: 'lessons', label: t('home.lessons'), subtitle: 'Start Learning',
+            icon: 'book-open-variant', size: 'large',
+            gradient: ['#4F46E5', '#4338CA'], // Deep Indigo
+            route: 'Learn', screen: 'LearnDashboard',
+            colSpan: 8, height: 130
         },
         {
-            id: '2',
-            title: t('home.quiz'),
-            icon: 'help-circle-outline',
-            color: '#F2B8B5',
-            gradient: ['#ec008c', '#fc6767'], // Pink-Red
-            onPress: () => navigation.navigate('Learn', { screen: 'Quiz' }),
+            id: 'quiz', label: t('home.quiz'), subtitle: '',
+            icon: 'brain', size: 'small',
+            gradient: ['#EC4899', '#BE185D'], // Pink
+            route: 'Learn', screen: 'Quiz',
+            colSpan: 4, height: 130
         },
+
+        // Row 2: Games (Banner)
         {
-            id: '3',
-            title: t('home.games'),
-            icon: 'gamepad-variant',
-            color: '#C4E7FF',
-            gradient: ['#11998e', '#38ef7d'], // Teal-Green (Fun/Growth)
-            onPress: () => navigation.navigate('Games'),
+            id: 'games', label: t('home.games'), subtitle: 'Play Games',
+            icon: 'gamepad-variant', size: 'large',
+            gradient: ['#10B981', '#059669'], // Emerald
+            route: 'Games',
+            colSpan: 12, height: 110
         },
+
+        // Row 3: Stats & Utils (Small)
+        { id: 'leaderboard', label: 'Ranks', icon: 'podium', gradient: ['#F59E0B', '#D97706'], route: 'Leaderboard', colSpan: 3, height: 100 },
+        { id: 'rewards', label: 'Rewards', icon: 'trophy', gradient: ['#FBBF24', '#F59E0B'], route: 'Rewards', colSpan: 3, height: 100 },
+        { id: 'ai', label: 'AI Tutor', icon: 'robot', gradient: ['#2DD4BF', '#0D9488'], route: 'Chatbot', colSpan: 3, height: 100 },
+        { id: 'classroom', label: 'Class', icon: 'school', gradient: ['#8B5CF6', '#7C3AED'], route: 'Classroom', colSpan: 3, height: 100 },
+
+        // Row 4: System
+        { id: 'feedback', label: 'Feedback', icon: 'comment-text-outline', gradient: ['#94A3B8', '#64748B'], route: 'StudentFeedback', colSpan: 6, height: 100 },
+        { id: 'sync', label: 'Sync Data', icon: 'cloud-sync', gradient: ['#334155', '#1E293B'], route: 'Sync', colSpan: 6, height: 100 },
+
+        // Row 5: Science Interactive (Moved to end, narrower)
         {
-            id: '4',
-            title: t('home.rewards'),
-            icon: 'trophy-outline',
-            color: '#F7D486',
-            gradient: ['#f12711', '#f5af19'], // Gold-Orange
-            onPress: () => navigation.navigate('Rewards'),
-        },
-        {
-            id: '5',
-            title: t('home.science'),
-            icon: 'flask-outline',
-            color: '#C3EED0',
-            gradient: ['#00d2ff', '#3a7bd5'], // Cyan-Blue
-            onPress: () => navigation.navigate('Learn', { screen: 'ModelList' }),
-        },
-        {
-            id: '6',
-            title: t('home.sync'),
-            icon: 'cloud-sync-outline',
-            color: '#E0E0E0',
-            gradient: ['#4e4376', '#2b5876'], // Deep Blue/Purple (Tech feel)
-            onPress: () => navigation.navigate('Sync'),
-        },
-        {
-            id: '7',
-            title: 'Leaderboard',
-            icon: 'podium-gold',
-            color: '#FFD700',
-            gradient: ['#FDC830', '#F37335'], // Rich Gold
-            onPress: () => navigation.navigate('Leaderboard'),
-        },
-        {
-            id: '8',
-            title: 'Classroom',
-            icon: 'school-outline',
-            color: '#A78BFA',
-            gradient: ['#8E2DE2', '#4A00E0'], // Electric Violet
-            onPress: () => navigation.navigate('Classroom'),
-        },
-        {
-            id: '9',
-            title: 'AI Tutor',
-            icon: 'robot-outline',
-            color: '#B2EBF2',
-            gradient: ['#00ACC1', '#0097A7'], // Cyan/Teal
-            onPress: () => navigation.navigate('Chatbot'),
-        },
-        {
-            id: '10',
-            title: 'Feedback',
-            icon: 'comment-quote-outline',
-            color: '#FFCCBC',
-            gradient: ['#FF416C', '#FF4B2B'], // Red-Orange
-            onPress: () => navigation.navigate('StudentFeedback'),
+            id: 'science_interactive', label: 'Science Interactive', subtitle: 'Explore 3D Models',
+            icon: 'cube-outline', size: 'large',
+            gradient: ['#ecfeff', '#cffafe'], // Cyan
+            route: 'Learn', screen: 'ModelList',
+            colSpan: 8, height: 90
         },
     ];
 
-    const getSimIcon = (subject: string) => {
-        const icons: Record<string, any> = {
-            'Physics': 'atom',
-            'Chemistry': 'flask',
-            'Math': 'calculator',
-            'Biology': 'dna'
-        };
-        return icons[subject] || 'school';
-    };
-
-    const getSimGradient = (subject: string) => {
-        const gradients: Record<string, string[]> = {
-            'Physics': ['#2196F3', '#42A5F5'],
-            'Chemistry': ['#4CAF50', '#66BB6A'],
-            'Math': ['#FF9800', '#FFB74D'],
-            'Biology': ['#9C27B0', '#BA68C8']
-        };
-        return gradients[subject] || ['#607D8B', '#90A4AE'];
-    };
-
-    if (isMobile) {
-        return <MobileHomeScreen navigation={navigation} />;
-    }
-
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <View style={getStyles(isDark).container}>
+            <LinearGradient
+                colors={isDark ? ['#0A1628', '#0F172A', '#1E293B'] : ['#F0F9FF', '#E0F2FE', '#BAE6FD']}
+                style={[StyleSheet.absoluteFill, { zIndex: -1 }]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            />
 
-            {/* Scrollable Content */}
-            <ScrollView
-                style={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContentContainer}
-                removeClippedSubviews={true}
-            >
-                {/* Header Section */}
+            {/* Starry Background */}
+            {isDark && (
+                <View style={getStyles(isDark).starsContainer}>
+                    {renderStars()}
+                </View>
+            )}
+
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={getStyles(isDark).scrollContent}>
+
+                {/* 🌟 PREMIUM HEADER (Profile + Stats) */}
                 <LinearGradient
-                    colors={gradients.primary}
+                    colors={isDark ? ['#0A1628', '#1E293B'] : ['#6366F1', '#8B5CF6', '#A855F7']}
+                    style={[getStyles(isDark).headerBackground, isMobile && { paddingBottom: 30 }]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={[styles.headerBackground, { paddingTop: 0 }]}
                 >
-                    {/* Decorative circles */}
-                    <View style={[styles.decorativeCircle, { top: -60, right: -40, width: 180, height: 180 }]} />
-                    <View style={[styles.decorativeCircle, { bottom: -50, left: -30, width: 150, height: 150 }]} />
-
-                    <Animated.View entering={FadeInDown.duration(600)} style={styles.headerContent}>
-                        {isMobile ? (
-                            <MobileHomeHeader
-                                user={user}
-                                streak={streak}
-                                xp={xp}
-                                level={level}
-                                onProfilePress={() => navigation.navigate('Profile')}
-                                onSearchPress={() => navigation.navigate('Learn')}
-                            />
-                        ) : (
-                            <>
-                                <View style={styles.greetingRow}>
-                                    <UserGreetingCard
-                                        userName={user?.name || 'Guest'}
-                                        streak={streak}
-                                        avatarId={parseInt(user?.avatar || '1')}
-                                        variant="light"
-                                    />
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                        <LanguageSwitcher />
-                                        <TouchableOpacity
-                                            style={styles.searchButton}
-                                            onPress={() => navigation.navigate('Learn')}
-                                        >
-                                            <MaterialCommunityIcons name="magnify" size={24} color="#fff" />
-                                        </TouchableOpacity>
-                                    </View>
-                                </View>
-
-                                <XPProgressCard
-                                    level={level}
-                                    currentXP={xpInLevel}
-                                    xpForNextLevel={xpForNextLevel}
-                                    totalXP={xp}
-                                    variant="light"
-                                />
-                            </>
-                        )}
-                    </Animated.View>
-                </LinearGradient>
-
-                {/* Daily Goal Card */}
-                <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.dailyGoalSection}>
-                    <Surface style={styles.dailyGoalCard} elevation={3}>
-                        <View style={styles.dailyGoalHeader}>
-                            <View style={styles.dailyGoalIconContainer}>
-                                <MaterialCommunityIcons name="target" size={24} color={colors.primary} />
-                            </View>
-                            <Text variant="titleMedium" style={styles.dailyGoalTitle}>
-                                Daily Goal
-                            </Text>
-                            <Text variant="titleMedium" style={styles.dailyGoalProgress}>
-                                {xpInLevel}/50 XP
-                            </Text>
+                    <View style={[getStyles(isDark).headerContent, { paddingTop: insets.top + (isMobile ? 10 : spacing.lg), paddingHorizontal: isMobile ? 16 : 32 }]}>
+                        {/* Profile Section */}
+                        <View style={[getStyles(isDark).profileSection, isMobile && { gap: 10 }]}>
+                            <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+                                <Animated.View entering={FadeInDown.delay(100)}>
+                                    <LinearGradient
+                                        colors={currentAvatar.gradient}
+                                        style={[getStyles(isDark).avatarBorder, isMobile && { width: 44, height: 44, padding: 2 }]}
+                                    >
+                                        <Image source={currentAvatar.source} style={getStyles(isDark).avatarImage} />
+                                    </LinearGradient>
+                                </Animated.View>
+                            </TouchableOpacity>
+                            <Animated.View entering={FadeInRight.delay(200)}>
+                                {!isMobile && <Text style={getStyles(isDark).greeting}>Welcome back,</Text>}
+                                <Text style={[getStyles(isDark).userName, isMobile && { fontSize: 18 }]}>{user?.name?.split(' ')[0] || 'Student'}</Text>
+                            </Animated.View>
                         </View>
 
-                        <View style={styles.progressBarContainer}>
-                            <View style={styles.progressBarBg}>
-                                <LinearGradient
-                                    colors={[gradients.primary[0], gradients.primary[1]]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={[styles.progressBarFill, { width: `${Math.min((xpInLevel / 50) * 100, 100)}%` }]}
-                                />
-                            </View>
-                        </View>
-
-                        <Text variant="bodySmall" style={styles.dailyGoalMessage}>
-                            💪 {xpInLevel >= 50 ? "Goal achieved! Great work!" : "Keep it up! You're almost there."}
-                        </Text>
-                    </Surface>
-                </Animated.View>
-                {/* My Subjects Section Removed */}
-
-                {/* Recommended Section */}
-                <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.recommendedSection}>
-                    <View style={styles.sectionHeader}>
-                        <LinearGradient
-                            colors={['#FF9800', '#FFB74D']}
-                            style={styles.sectionIconBg}
-                        >
-                            <MaterialCommunityIcons name="star" size={20} color="#fff" />
-                        </LinearGradient>
-                        <Text variant="titleLarge" style={styles.sectionTitle}>
-                            Recommended for You
-                        </Text>
-                    </View>
-
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.recommendedScroll}
-                    >
-                        {[1, 2, 3].map((item, index) => (
-                            <Animated.View
-                                key={item}
-                                entering={FadeInRight.delay(index * 100).duration(500)}
-                            >
-                                <TouchableOpacity style={styles.recommendedCard} activeOpacity={0.8}>
-                                    <View style={styles.recommendedIconContainer}>
-                                        <MaterialCommunityIcons name="star" size={32} color="#FF9800" />
-                                    </View>
-                                    <View style={styles.recommendedContent}>
-                                        <Text variant="titleSmall" style={styles.recommendedTitle}>
-                                            Daily Challenge
-                                        </Text>
-                                        <Text variant="bodySmall" style={styles.recommendedSubtitle}>
-                                            Earn 50 XP
-                                        </Text>
+                        {/* Stats: XP, Streak, Settings */}
+                        <View style={[getStyles(isDark).statsContainer, isMobile && { gap: 8 }]}>
+                            {/* Stats content remains same but container flexes */}
+                            <Animated.View entering={FadeInDown.delay(300)} style={[getStyles(isDark).streakBadge, isMobile && { paddingHorizontal: 8, paddingVertical: 4, gap: 4 }]}>
+                                <MaterialCommunityIcons name="fire" size={isMobile ? 16 : 24} color="#FF6B6B" />
+                                <Text style={[getStyles(isDark).streakText, isMobile && { fontSize: 13 }]}>{streak}</Text>
+                            </Animated.View>
+                            {/* ... Toggles remain ... */}
+                            <Animated.View entering={FadeInDown.delay(400)}>
+                                <TouchableOpacity style={getStyles(isDark).darkModeToggle} onPress={toggleTheme}>
+                                    <View style={[getStyles(isDark).toggleGradient, isMobile && { width: 32, height: 32 }]}>
+                                        <MaterialCommunityIcons name={isDark ? 'weather-sunny' : 'moon-waning-crescent'} size={16} color={isDark ? '#FCD34D' : '#fff'} />
                                     </View>
                                 </TouchableOpacity>
                             </Animated.View>
-                        ))}
-                    </ScrollView>
-                </Animated.View>
-
-                {/* Featured Simulations */}
-                <Animated.View entering={FadeInDown.delay(500).duration(600)} style={styles.simulationsSection}>
-                    <View style={styles.sectionHeader}>
-                        <LinearGradient
-                            colors={['#2196F3', '#42A5F5']}
-                            style={styles.sectionIconBg}
-                        >
-                            <MaterialCommunityIcons name="flask" size={20} color="#fff" />
-                        </LinearGradient>
-                        <Text variant="titleLarge" style={styles.sectionTitle}>Featured Simulations</Text>
+                            <Animated.View entering={FadeInDown.delay(500)}>
+                                <TouchableOpacity style={getStyles(isDark).rewardsIcon} onPress={() => navigation.navigate('Rewards')}>
+                                    <View style={[getStyles(isDark).rewardsIcon, isMobile && { width: 32, height: 32 }]}>
+                                        <MaterialCommunityIcons name="crown" size={18} color="#FFD700" />
+                                    </View>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        </View>
                     </View>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.simulationsScroll}
-                    >
-                        {featuredSimulations.map((sim, index) => {
-                            const simGradient = getSimGradient(sim.subject);
-                            const primaryColor = simGradient[0];
 
-                            return (
-                                <Animated.View
-                                    key={sim.fileName}
-                                    entering={FadeInRight.delay(index * 100).duration(500)}
-                                >
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        onPress={() => {
-                                            setSelectedSim(sim);
-                                            setViewerVisible(true);
-                                        }}
-                                    >
-                                        <View style={[styles.simCard, { shadowColor: primaryColor }]}>
-                                            <LinearGradient
-                                                colors={[simGradient[0], simGradient[1]] as const}
-                                                style={styles.simIconContainer}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                            >
-                                                <MaterialCommunityIcons
-                                                    name={getSimIcon(sim.subject)}
-                                                    size={36}
-                                                    color="#fff"
-                                                />
-                                            </LinearGradient>
-
-                                            <View style={styles.simCardContent}>
-                                                <Text variant="titleSmall" style={styles.simTitle} numberOfLines={2}>
-                                                    {sim.title}
-                                                </Text>
-                                                <View style={[styles.simSubjectBadge, { backgroundColor: primaryColor + '15' }]}>
-                                                    <Text style={[styles.simSubjectText, { color: primaryColor }]}>
-                                                        {sim.subject}
-                                                    </Text>
-                                                </View>
+                    {/* XP Progress Card - ULT COMPACT MOBILE */}
+                    <View style={[getStyles(isDark).xpCardSection, isMobile && { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 0 }]}>
+                        <View style={[getStyles(isDark).xpCard, isMobile && { padding: 10, borderRadius: 12, borderWidth: 0, backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+                            <View style={[getStyles(isDark).xpCardContent, isMobile && { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }]}>
+                                {/* Mobile: Clean Row Layout */}
+                                {isMobile ? (
+                                    <>
+                                        <View style={{ flex: 1 }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Level {level}</Text>
+                                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '600' }}>{currentLevelXP}/{xpNeededForLevel} XP</Text>
+                                            </View>
+                                            <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                                                <View style={{ height: '100%', width: `${Math.min(levelProgress, 100)}%`, backgroundColor: '#FFD700' }} />
                                             </View>
                                         </View>
-                                    </TouchableOpacity>
-                                </Animated.View>
+                                        <View style={{ alignItems: 'flex-end' }}>
+                                            <Text style={{ color: '#FFD700', fontSize: 14, fontWeight: '800' }}>{totalXP}</Text>
+                                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 9, fontWeight: '600' }}>TOTAL XP</Text>
+                                        </View>
+                                    </>
+                                ) : (
+                                    // Desktop / Tablet Layout (Original)
+                                    <>
+                                        <View style={getStyles(isDark).xpHeader}>
+                                            <MaterialCommunityIcons name="star-four-points" size={20} color={isDark ? "#FFD700" : "#F59E0B"} />
+                                            <Text style={getStyles(isDark).xpTitle}>Total XP</Text>
+                                            <Text style={getStyles(isDark).xpValue}>{totalXP} XP</Text>
+                                        </View>
+                                        <View style={getStyles(isDark).progressContainer}>
+                                            <LinearGradient
+                                                colors={isDark ? ['#FFD700', '#FFA500'] : ['#FBBF24', '#F59E0B']}
+                                                style={[getStyles(isDark).progressFill, { width: `${Math.min(levelProgress, 100)}%` }]}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 0 }}
+                                            />
+                                        </View>
+                                        <Text style={getStyles(isDark).nextLevelText}>Level {level} • {currentLevelXP}/{xpNeededForLevel} XP to Level {level + 1}</Text>
+                                    </>
+                                )}
+                            </View>
+                        </View>
+                    </View>
+                </LinearGradient>
+
+                {/* 🚀 MAIN CONTENT AREA (Overlapping Header) */}
+                <View style={[getStyles(isDark).mainContainer, isMobile && { marginTop: -20 }]}>
+
+                    {/* 📦 BENTO GRID (Unstructured but Aligned) */}
+                    <View style={getStyles(isDark).bentoGrid}>
+                        {BENTO_ITEMS.map((item, index) => {
+                            // Custom Renderer for Science Banner
+                            if (item.id === 'science_interactive') {
+                                return (
+                                    <ScaleButton
+                                        key={item.id}
+                                        style={[getStyles(isDark).bentoItem, { flexBasis: '100%', height: (item as any).height || 90 }]}
+                                        onPress={() => navigation.navigate(item.route, { screen: item.screen })}
+                                    >
+                                        <Surface style={[getStyles(isDark).bentoSurface, { borderRadius: 20 }]} elevation={3}>
+                                            <LinearGradient
+                                                colors={item.gradient as any}
+                                                start={{ x: 0, y: 0.5 }}
+                                                end={{ x: 1, y: 0.5 }}
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    paddingHorizontal: 24,
+                                                    height: '100%',
+                                                }}
+                                            >
+                                                {/* Watermark for Science Banner */}
+                                                <MaterialCommunityIcons
+                                                    name={item.icon as any}
+                                                    size={100}
+                                                    color="#0891B2"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        right: -10,
+                                                        bottom: -20,
+                                                        opacity: 0.1,
+                                                        transform: [{ rotate: '-10deg' }]
+                                                    }}
+                                                />
+
+                                                <View>
+                                                    <Text style={{ fontSize: 20, fontWeight: '800', color: '#155E75' }}>{item.label}</Text>
+                                                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0E7490', marginTop: 4, letterSpacing: 0.5 }}>{item.subtitle?.toUpperCase()}</Text>
+                                                </View>
+                                                <View style={{ backgroundColor: 'rgba(255,255,255,0.9)', padding: 12, borderRadius: 16 }}>
+                                                    <MaterialCommunityIcons name="cube-outline" size={30} color="#0891B2" />
+                                                </View>
+                                            </LinearGradient>
+                                        </Surface>
+                                    </ScaleButton>
+                                );
+                            }
+
+
+                            let itemWidth: any;
+                            // Dynamic Height scaling for mobile
+                            const baseHeight = (item as any).height || 120;
+                            const mobileHeight = baseHeight < 110 ? 90 : 100; // Cap max height on mobile
+                            const itemHeight = isMobile ? mobileHeight : baseHeight;
+
+                            if (isMobile) {
+                                // Mobile Logic: More Aggressive 2-Column Layout
+                                // Only span full width if it's explicitly a 12-col banner
+                                if (item.colSpan >= 12) itemWidth = '100%';
+                                else itemWidth = '47%';
+                            } else {
+                                // Desktop Logic: Keep existing precise percentages
+                                const getSafeBasis = (span: number) => {
+                                    if (span >= 12) return '100%';
+                                    if (span >= 8) return '60%';
+                                    if (span >= 6) return '45%';
+                                    if (span >= 4) return '28%';
+                                    return '20%';
+                                };
+                                itemWidth = getSafeBasis(item.colSpan);
+                            }
+
+                            const isLarge = item.colSpan > 4;
+
+                            return (
+                                <ScaleButton
+                                    key={item.id}
+                                    style={[getStyles(isDark).bentoItem, {
+                                        flexBasis: itemWidth,
+                                        height: itemHeight
+                                    }]}
+                                    onPress={() => navigation.navigate(item.route, { screen: item.screen })}
+                                >
+                                    <Surface style={getStyles(isDark).bentoSurface} elevation={2}>
+                                        <LinearGradient
+                                            colors={item.gradient as any}
+                                            style={getStyles(isDark).bentoGradient}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            {/* Watermark Icon */}
+                                            <MaterialCommunityIcons
+                                                name={item.icon as any}
+                                                size={80}
+                                                color="#FFF"
+                                                style={{
+                                                    position: 'absolute',
+                                                    right: -10,
+                                                    bottom: -10,
+                                                    opacity: 0.1,
+                                                    transform: [{ rotate: '-15deg' }]
+                                                }}
+                                            />
+
+                                            <MaterialCommunityIcons name={item.icon as any} size={isLarge ? 32 : 24} color="#fff" />
+                                            <View>
+                                                <Text style={[getStyles(isDark).bentoTitle, { fontSize: isLarge ? 18 : 14 }]}>{item.label}</Text>
+                                                {isLarge && <Text style={getStyles(isDark).bentoSubtitle}>{item.subtitle}</Text>}
+                                            </View>
+                                        </LinearGradient>
+                                    </Surface>
+                                </ScaleButton>
                             );
                         })}
-                    </ScrollView>
-
-                    <CustomButton
-                        variant="outlined"
-                        icon="flask-outline"
-                        onPress={() => navigation.navigate('Learn', {
-                            screen: 'SimulationList',
-                            params: { showAll: true }
-                        })}
-                        style={styles.exploreButton}
-                    >
-                        Explore All Simulations
-                    </CustomButton>
-                </Animated.View>
-
-                {/* Explore Section Title */}
-                <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.exploreSection}>
-                    <View style={styles.sectionHeader}>
-                        <LinearGradient
-                            colors={['#9C27B0', '#BA68C8']}
-                            style={styles.sectionIconBg}
-                        >
-                            <MaterialCommunityIcons name="compass-outline" size={20} color="#fff" />
-                        </LinearGradient>
-                        <Text variant="titleLarge" style={styles.sectionTitle}>
-                            {t('home.explore')}
-                        </Text>
                     </View>
-                </Animated.View>
 
-                {/* Menu Items Grid */}
-                <View style={styles.menuGrid}>
-                    {MENU_ITEMS.map((item, index) => {
-                        const gap = spacing.md;
-                        const padding = spacing.md;
-                        const availableWidth = containerStyle.maxWidth === '100%' ? width : (typeof containerStyle.maxWidth === 'number' ? containerStyle.maxWidth : width);
-                        // Calculate width: (Total Width - Horizontal Padding - (Gaps)) / Columns
-                        const itemWidth = (width - (padding * 2) - (gap * (numColumns - 1))) / numColumns;
-
-                        return (
-                            <Animated.View
-                                key={item.id}
-                                entering={FadeInDown.delay(getStaggerDelay(index + 6)).duration(500).springify()}
-                                style={{ width: itemWidth }}
+                    {/* 🧪 SIMULATIONS SECTION */}
+                    <View style={getStyles(isDark).simSection}>
+                        <View style={getStyles(isDark).sectionHeaderRow}>
+                            <View>
+                                <Text style={getStyles(isDark).sectionHeader}>Featured Simulations</Text>
+                                <Text style={getStyles(isDark).sectionSubHeader}>Interactive 3D Models & Labs</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={getStyles(isDark).exploreBtn}
+                                onPress={() => navigation.navigate('Learn', { screen: 'SimulationList' })}
                             >
-                                <HomeCard
-                                    title={item.title}
-                                    icon={item.icon}
-                                    color={item.color}
-                                    gradient={item.gradient}
-                                    onPress={item.onPress}
-                                />
-                            </Animated.View>
-                        );
-                    })}
-                </View>
-            </ScrollView >
+                                <Text style={getStyles(isDark).exploreBtnText}>Explore All</Text>
+                                <MaterialCommunityIcons name="arrow-right" size={16} color="#4F46E5" />
+                            </TouchableOpacity>
+                        </View>
 
-            {selectedSim && (
-                <SimulationViewer
-                    visible={viewerVisible}
-                    title={selectedSim.title}
-                    fileName={selectedSim.fileName}
-                    onClose={() => setViewerVisible(false)}
-                />
-            )}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={getStyles(isDark).simScroll}>
+                            {featuredSimulations.map((sim, index) => {
+                                const isPhysics = sim.subject === 'Physics';
+                                const isChem = sim.subject === 'Chemistry';
+                                const subColor = isPhysics ? '#6366F1' : isChem ? '#10B981' : '#F59E0B';
+                                const subBg = isPhysics ? 'rgba(99, 102, 241, 0.1)' : isChem ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+                                const imageUrl = getSimImage(sim.title, sim.subject);
+
+                                return (
+                                    <View key={sim.fileName} style={getStyles(isDark).simCardWrapper}>
+                                        <TouchableOpacity
+                                            style={getStyles(isDark).simCardPremium}
+                                            activeOpacity={0.9}
+                                            onPress={() => {
+                                                setSelectedSim(sim);
+                                                setViewerVisible(true);
+                                            }}
+                                        >
+                                            <View style={getStyles(isDark).simPreviewPremium}>
+                                                <Image
+                                                    source={imageUrl as any}
+                                                    style={getStyles(isDark).simImage}
+                                                    resizeMode="cover"
+                                                />
+                                                <LinearGradient
+                                                    colors={['transparent', 'rgba(0,0,0,0.3)']}
+                                                    style={getStyles(isDark).simImageOverlay}
+                                                />
+                                                <View style={[getStyles(isDark).playOverlay, { backgroundColor: subColor }]}>
+                                                    <MaterialCommunityIcons name="play" size={20} color="#fff" />
+                                                </View>
+                                            </View>
+
+                                            <View style={getStyles(isDark).simContentPremium}>
+                                                <View style={[getStyles(isDark).simBadge, { backgroundColor: subBg }]}>
+                                                    <Text style={[getStyles(isDark).simSubject, { color: subColor }]}>{sim.subject}</Text>
+                                                </View>
+                                                <Text numberOfLines={2} style={getStyles(isDark).simTitlePremium}>{sim.title}</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                </View>
+
+                <View style={{ height: 120 }} />
+            </ScrollView >
 
             <StreakCelebration
                 visible={showStreakCelebration}
                 streak={streak}
                 onClose={() => setShowStreakCelebration(false)}
             />
-
             {
-                showOnboarding && (
-                    <OnboardingTutorial onComplete={() => setShowOnboarding(false)} />
+                selectedSim && (
+                    <SimulationViewer
+                        visible={viewerVisible}
+                        title={selectedSim.title}
+                        fileName={selectedSim.fileName}
+                        onClose={() => setViewerVisible(false)}
+                    />
                 )
             }
+            {/* Mobile / Global Overlays */}
+            {isMobile && showConfetti && (
+                <ConfettiAnimation
+                    isVisible={true}
+                    onComplete={() => setShowConfetti(false)}
+                />
+            )}
 
-            <ConfettiAnimation
-                isVisible={showConfetti}
-                onComplete={() => setShowConfetti(false)}
-            />
+            {showOnboarding && (
+                <OnboardingTutorial
+                    onComplete={() => {
+                        setShowOnboarding(false);
+                        AsyncStorage.setItem('onboardingCompleted', 'true');
+                    }}
+                />
+            )}
         </View >
     );
 };
 
-const createStyles = (isDark: boolean) => StyleSheet.create({
+const getStyles = (isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#0F172A' : '#F5F5F5',
     },
+    scrollContent: {
+        flexGrow: 1,
+    },
+    starsContainer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 0,
+    },
+    star: {
+        position: 'absolute',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 50,
+    },
+    // Header
     headerBackground: {
-        paddingBottom: spacing.xl,
+        paddingBottom: 60,
+        // Mobile optimization: less bottom padding to pull content up
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
-        overflow: 'hidden',
-    },
-    decorativeCircle: {
-        position: 'absolute',
-        borderRadius: 999,
-        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     headerContent: {
-        paddingHorizontal: spacing.lg,
-        paddingTop: 0,
-        paddingBottom: spacing.xs,
-        gap: 0,
-    },
-    greetingRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: spacing.xs,
+        paddingHorizontal: 32,
+        maxWidth: 1200,
+        width: '100%',
+        alignSelf: 'center',
     },
-    searchButton: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        padding: spacing.sm,
+    profileSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    avatarBorder: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        padding: 3,
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 30,
+        backgroundColor: '#fff',
+    },
+    greeting: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    userName: {
+        color: '#fff',
+        fontSize: 24,
+        fontWeight: '700',
+    },
+
+    // Stats Header
+    statsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    streakBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.3)',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: isDark ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 255, 255, 0.5)',
+    },
+    streakText: {
+        color: isDark ? '#FCA5A5' : '#FFFFFF',
+        fontWeight: '800',
+        fontSize: 16,
+    },
+    darkModeToggle: {
         borderRadius: 14,
-        height: 48,
-        width: 48,
+        overflow: 'hidden',
+    },
+    toggleGradient: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)',
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)',
+    },
+    rewardsIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: isDark ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 255, 255, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.3)',
+        borderColor: isDark ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 255, 255, 0.5)',
     },
-    dailyGoalSection: {
-        paddingHorizontal: spacing.lg,
-        marginTop: -spacing.xl,
-        marginBottom: spacing.md,
+    xpCardSection: {
+        paddingHorizontal: 32,
+        paddingTop: 16,
+        paddingBottom: 10, // Reduced from 20
+        maxWidth: 1200,
+        width: '100%',
+        alignSelf: 'center',
     },
-    dailyGoalCard: {
-        backgroundColor: isDark ? '#1E293B' : '#fff',
-        borderRadius: 20,
-        padding: spacing.lg,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-        elevation: 3,
+    xpCard: {
+        backgroundColor: isDark ? 'rgba(91, 79, 232, 0.15)' : 'rgba(255, 255, 255, 0.25)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(91, 79, 232, 0.3)' : 'rgba(255, 255, 255, 0.4)',
     },
-    dailyGoalHeader: {
+    xpCardContent: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    xpHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: spacing.md,
-        gap: spacing.sm,
+        marginBottom: 8,
+        gap: 8,
     },
-    dailyGoalIconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        backgroundColor: colors.primary + '15',
+    xpTitle: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
+        flex: 1,
+    },
+    xpValue: {
+        color: isDark ? '#FFD700' : '#FFFFFF',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    progressContainer: {
+        height: 8,
+        backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+        borderRadius: 4,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressFill: {
+        height: '100%',
+        borderRadius: 4,
+    },
+    nextLevelText: {
+        color: isDark ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.9)',
+        fontSize: 11,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+
+    // Main Content
+    mainContainer: {
+        marginTop: -60, // Overlap
+        paddingHorizontal: 24,
+        maxWidth: 1000,
+        width: '100%',
+        alignSelf: 'center',
+    },
+
+    // Hero
+    heroCard: {
+        marginBottom: 32,
+        borderRadius: 24,
+        elevation: 8,
+        shadowColor: '#4F46E5',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+    },
+    heroGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 24,
+        borderRadius: 24,
+        gap: 20,
+    },
+    heroIconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    dailyGoalTitle: {
-        fontWeight: '700',
+    heroContent: {
         flex: 1,
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
     },
-    dailyGoalProgress: {
-        fontWeight: '800',
-        color: colors.primary,
+    heroLabel: {
+        color: '#A5B4FC',
+        fontSize: 12,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        marginBottom: 4,
     },
-    progressBarContainer: {
-        marginBottom: spacing.sm,
+    heroTitle: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
     },
-    progressBarBg: {
-        height: 12,
-        backgroundColor: isDark ? '#334155' : '#F0F0F0',
-        borderRadius: 6,
+
+    // Bento Grid
+    bentoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 16,
+        justifyContent: 'center', // Align center
+    },
+    bentoItem: {
+        height: 120, // Uniform height for cleaner look
+        flexGrow: 1,
+    },
+    bentoSurface: {
+        flex: 1,
+        borderRadius: 20,
         overflow: 'hidden',
     },
-    progressBarFill: {
-        height: '100%',
-        borderRadius: 6,
-    },
-    dailyGoalMessage: {
-        color: isDark ? '#CBD5E1' : '#666',
-        textAlign: 'center',
-        marginTop: spacing.xs,
-    },
-    scrollContent: {
+    bentoGradient: {
         flex: 1,
+        padding: 16,
+        justifyContent: 'space-between',
     },
-    scrollContentContainer: {
-        paddingBottom: 100,
+    bentoTitle: {
+        color: '#fff',
+        fontWeight: '800',
     },
-    subjectsSection: {
-        marginTop: spacing.lg,
-        marginBottom: spacing.lg,
-        paddingTop: spacing.md,
-        paddingBottom: spacing.md,
+    bentoSubtitle: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+    },
+
+    // Simulations
+    simSection: {
+        marginTop: 40,
     },
     sectionHeaderRow: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: spacing.lg,
-        marginBottom: spacing.md,
-    },
-    sectionMainTitle: {
-        fontWeight: '800',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
-    },
-    changeClassLink: {
-        color: '#6A5AE0',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    subjectsScroll: {
-        paddingHorizontal: spacing.lg,
-        gap: spacing.sm,
-    },
-    subjectChip: {
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm + 2,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        marginRight: spacing.sm,
-    },
-    subjectChipActive: {
-        backgroundColor: '#6A5AE0',
-        borderColor: '#6A5AE0',
-    },
-    subjectChipText: {
-        fontWeight: '600',
-        color: '#666',
-        fontSize: 14,
-    },
-    subjectChipTextActive: {
-        color: '#fff',
-    },
-    recommendedSection: {
-        marginTop: spacing.lg,
-        marginBottom: spacing.lg,
+        alignItems: 'flex-end',
+        marginBottom: 20,
+        paddingHorizontal: 4,
     },
     sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        marginBottom: spacing.md,
-        paddingHorizontal: spacing.lg,
-    },
-    sectionIconBg: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    sectionTitle: {
+        fontSize: 20,
         fontWeight: '800',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
-        fontSize: 18,
+        color: isDark ? '#F8FAFC' : '#1E293B',
     },
-    recommendedScroll: {
-        paddingHorizontal: spacing.lg,
-        gap: spacing.md,
+    sectionSubHeader: {
+        fontSize: 14,
+        color: isDark ? '#94A3B8' : '#64748B',
+        marginTop: 4,
+        fontWeight: '500',
     },
-    recommendedCard: {
-        width: 200,
-        backgroundColor: isDark ? '#1E293B' : '#fff',
-        borderRadius: 16,
-        padding: spacing.md,
+    exploreBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.md,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
-        marginRight: spacing.sm,
-    },
-    recommendedIconContainer: {
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        backgroundColor: '#FF9800' + '15',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    recommendedContent: {
-        flex: 1,
-    },
-    recommendedTitle: {
-        fontWeight: '700',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
-        marginBottom: 2,
-    },
-    recommendedSubtitle: {
-        color: isDark ? '#CBD5E1' : '#666',
-        fontSize: 12,
-    },
-    simulationsSection: {
-        marginTop: spacing.lg,
-        marginBottom: spacing.xl,
-    },
-    simulationsScroll: {
-        paddingBottom: spacing.md,
-        gap: spacing.md,
-        paddingHorizontal: spacing.lg,
-    },
-    simCard: {
-        width: 170,
-        height: 210,
-        borderRadius: 20,
-        backgroundColor: isDark ? '#1E293B' : '#fff',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 12,
-        elevation: 5,
-        alignItems: 'center',
-        padding: spacing.lg,
-        justifyContent: 'space-between',
-    },
-    simIconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: spacing.sm,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
-        elevation: 4,
-    },
-    simCardContent: {
-        alignItems: 'center',
-        width: '100%',
-        gap: spacing.xs,
-    },
-    simTitle: {
-        fontWeight: '700',
-        textAlign: 'center',
-        color: isDark ? '#F1F5F9' : '#1A1A1A',
-        fontSize: 14,
-        lineHeight: 19,
-    },
-    simSubjectBadge: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: 5,
+        gap: 4,
+        padding: 8,
+        backgroundColor: '#EEF2FF',
         borderRadius: 12,
     },
-    simSubjectText: {
-        fontSize: 11,
+    exploreBtnText: {
+        color: '#4F46E5',
         fontWeight: '700',
-        letterSpacing: 0.3,
+        fontSize: 13,
+    },
+    simScroll: {
+        paddingHorizontal: 4,
+        paddingBottom: 24,
+    },
+    simCardWrapper: {
+        marginRight: 20,
+    },
+    simCardPremium: {
+        width: 200,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        shadowColor: '#64748B',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 4,
+        overflow: 'hidden',
+    },
+    simPreviewPremium: {
+        height: 120,
+        backgroundColor: '#e2e8f0',
+        position: 'relative',
+    },
+    simImage: {
+        width: '100%',
+        height: '100%',
+    },
+    simImageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    playOverlay: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        borderRadius: 20,
+        padding: 6,
+        elevation: 4,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    simContentPremium: {
+        padding: 16,
+        paddingTop: 12,
+    },
+    simBadge: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginBottom: 8,
+    },
+    simTitlePremium: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#1E293B',
+        lineHeight: 20,
+    },
+    simSubject: {
+        fontSize: 10,
+        fontWeight: 'bold',
         textTransform: 'uppercase',
-    },
-    exploreButton: {
-        marginTop: spacing.lg,
-        marginHorizontal: spacing.lg,
-        borderRadius: 16,
-        borderColor: '#6A5AE0',
-        borderWidth: 2,
-    },
-    exploreSection: {
-        marginTop: spacing.md,
-        marginBottom: spacing.md,
-    },
-    menuGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: spacing.md,
-        paddingHorizontal: spacing.md,
     },
 });
 

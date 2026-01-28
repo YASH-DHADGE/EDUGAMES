@@ -25,6 +25,11 @@ const AdminNavigator = () => {
             <Stack.Screen name="AdminMap" component={AdminMapScreen} />
             <Stack.Screen name="Notifications" component={NotificationScreen} />
             <Stack.Screen name="AdminFeedback" component={require('../screens/admin/AdminFeedbackScreen').default} />
+
+            {/* New Placeholder Screens */}
+            <Stack.Screen name="AdminSettings" component={require('../screens/admin/AdminSettingsScreen').default} />
+            <Stack.Screen name="AdminLogs" component={require('../screens/admin/AdminLogsScreen').default} />
+            <Stack.Screen name="AdminSupport" component={require('../screens/admin/AdminSupportScreen').default} />
         </Stack.Navigator>
     );
 };

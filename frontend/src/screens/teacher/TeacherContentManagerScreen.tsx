@@ -5,10 +5,13 @@ import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const TeacherContentManagerScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Chapter Details
     const [title, setTitle] = useState('');
@@ -30,9 +33,8 @@ const TeacherContentManagerScreen = () => {
                 classNumber: selectedClass,
                 subject
             });
-            Alert.alert('Success', 'Content Created Successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            setSuccessMessage('Content Created Successfully!');
+            setShowSuccessModal(true);
         } catch (error) {
             console.error('Failed to create chapter:', error);
             Alert.alert('Error', 'Failed to create chapter');
@@ -173,6 +175,17 @@ const TeacherContentManagerScreen = () => {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Success!"
+                message={successMessage}
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    navigation.goBack();
+                }}
+                buttonText="Back to Dashboard"
+            />
         </View>
     );
 };

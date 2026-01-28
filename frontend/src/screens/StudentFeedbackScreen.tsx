@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppTheme } from '../context/ThemeContext';
 import FeedbackFormModal from '../components/FeedbackFormModal';
 import api from '../services/api';
+import SuccessModal from '../components/ui/SuccessModal';
 import { formatDistanceToNow } from 'date-fns';
 
 const StudentFeedbackScreen = () => {
@@ -19,6 +20,7 @@ const StudentFeedbackScreen = () => {
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<any[]>([]);
     const [showTeacherSelection, setShowTeacherSelection] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Modal Configuration
     const [modalConfig, setModalConfig] = useState<{
@@ -288,7 +290,10 @@ const StudentFeedbackScreen = () => {
             <FeedbackFormModal
                 visible={modalConfig.visible}
                 onClose={() => setModalConfig(prev => ({ ...prev, visible: false }))}
-                onSuccess={fetchMyFeedback}
+                onSuccess={() => {
+                    fetchMyFeedback();
+                    setShowSuccessModal(true);
+                }}
                 initialTargetType={modalConfig.targetType}
                 initialTargetId={modalConfig.targetId}
                 initialTargetName={modalConfig.targetName}
@@ -320,6 +325,15 @@ const StudentFeedbackScreen = () => {
                     </Surface>
                 </View>
             </Modal>
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Feedback Sent!"
+                message="Thank you for your feedback."
+                onClose={() => {
+                    setShowSuccessModal(false);
+                }}
+                buttonText="Done"
+            />
         </View>
     );
 };

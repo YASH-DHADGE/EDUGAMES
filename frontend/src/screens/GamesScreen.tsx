@@ -7,6 +7,7 @@ import { useAppTheme } from '../context/ThemeContext';
 import Animated, { FadeInDown, FadeInRight, FadeInUp } from 'react-native-reanimated';
 import { spacing } from '../theme';
 import { LinearGradient } from 'expo-linear-gradient';
+import UnifiedHeader from '../components/UnifiedHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { getUserGameStats } from '../services/gamesService';
@@ -185,106 +186,128 @@ const GamesScreen = ({ navigation }: any) => {
         };
     }, []);
 
-    const renderSection = (title: string, icon: string, games: GameItem[], delayOffset: number) => (
-        <Animated.View entering={FadeInUp.delay(delayOffset).duration(600)} style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-                <View style={[styles.sectionIcon, { backgroundColor: '#E3F2FD' }]}>
-                    <MaterialCommunityIcons name={icon as any} size={24} color="#1565C0" />
+    const getSectionTheme = (category: string) => {
+        const themes: Record<string, { gradient: [string, string], bgColor: string }> = {
+            'Science Lab': { gradient: ['#2196F3', '#42A5F5'], bgColor: '#E3F2FD' },
+            'Math Zone': { gradient: ['#FF9800', '#FFB74D'], bgColor: '#FFF3E0' },
+            'Brain Teasers': { gradient: ['#9C27B0', '#BA68C8'], bgColor: '#F3E5F5' },
+        };
+        return themes[category] || { gradient: ['#607D8B', '#90A4AE'], bgColor: '#ECEFF1' };
+    };
+
+    const renderSection = (title: string, icon: string, games: GameItem[], delayOffset: number) => {
+        const theme = getSectionTheme(title);
+
+        return (
+            <Animated.View entering={FadeInUp.delay(delayOffset).duration(600)} style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                    <LinearGradient
+                        colors={theme.gradient}
+                        style={styles.sectionIcon}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <MaterialCommunityIcons name={icon as any} size={22} color="#fff" />
+                    </LinearGradient>
+                    <Text style={styles.sectionTitle}>{title}</Text>
+                    <Text style={styles.sectionCount}>{games.length} games</Text>
                 </View>
-                <Text style={styles.sectionTitle}>{title}</Text>
-            </View>
-            <View style={styles.gamesGrid}>
-                {games.map((game, index) => {
-                    const stats = game.gameId ? gameStats[game.gameId] : undefined;
+                <View style={styles.gamesGrid}>
+                    {games.map((game, index) => {
+                        const stats = game.gameId ? gameStats[game.gameId] : undefined;
 
-                    return (
-                        <Animated.View
-                            key={game.id}
-                            entering={FadeInRight.delay(delayOffset + index * 100).springify()}
-                            style={[styles.gameCardWrapper, { width: isMobile ? '100%' : '48%' }]}
-                        >
-                            <TouchableOpacity
-                                activeOpacity={0.9}
-                                onPress={() => navigation.navigate(game.route, game.params)}
+                        return (
+                            <Animated.View
+                                key={game.id}
+                                entering={FadeInRight.delay(delayOffset + index * 100).springify()}
+                                style={[styles.gameCardWrapper, { width: isMobile ? '48%' : '48%' }]}
                             >
-                                <Surface style={styles.gameCard} elevation={3}>
+                                <TouchableOpacity
+                                    activeOpacity={0.9}
+                                    onPress={() => navigation.navigate(game.route, game.params)}
+                                >
                                     <LinearGradient
-                                        colors={game.gradient}
-                                        style={styles.gameCardGradient}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
+                                        colors={isDark ? ['#1E293B', '#1E293B'] : ['#EEF2FF', '#EEF2FF']}
+                                        style={[
+                                            styles.gameCard,
+                                            isMobile && {
+                                                flexDirection: 'column',
+                                                padding: 12,
+                                                justifyContent: 'center',
+                                                height: 150
+                                            }
+                                        ]}
                                     >
-                                        <MaterialCommunityIcons
-                                            name={game.icon as any}
-                                            size={100}
-                                            color="rgba(255,255,255,0.15)"
-                                            style={styles.bgIcon}
-                                        />
+                                        {/* Gradient Icon Box */}
+                                        <LinearGradient
+                                            colors={game.gradient}
+                                            style={[
+                                                styles.iconBox,
+                                                isMobile && {
+                                                    width: 48,
+                                                    height: 48,
+                                                    marginRight: 0,
+                                                    marginBottom: 10,
+                                                    borderRadius: 14
+                                                }
+                                            ]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            <MaterialCommunityIcons name={game.icon as any} size={isMobile ? 24 : 36} color="#fff" />
+                                        </LinearGradient>
 
-                                        <View style={styles.cardContent}>
-                                            <View style={styles.iconContainer}>
-                                                <MaterialCommunityIcons name={game.icon as any} size={32} color="#fff" />
-                                            </View>
-                                            <View style={styles.textContainer}>
-                                                <Text style={styles.gameTitle} numberOfLines={1}>{game.title}</Text>
-                                                <Text style={styles.gameDesc} numberOfLines={stats ? 1 : 2}>{game.description}</Text>
+                                        {/* Game Info */}
+                                        <View style={[styles.gameInfo, isMobile && { alignItems: 'center', width: '100%' }]}>
+                                            <Text
+                                                style={[
+                                                    styles.gameTitle,
+                                                    isMobile && {
+                                                        fontSize: 14,
+                                                        textAlign: 'center',
+                                                        marginBottom: 2
+                                                    }
+                                                ]}
+                                                numberOfLines={1}
+                                            >
+                                                {game.title}
+                                            </Text>
+                                            {!isMobile && <Text style={styles.gameDesc} numberOfLines={1}>{game.description}</Text>}
 
-                                                {/* Stats Display */}
-                                                {stats && (
-                                                    <View style={styles.statsRow}>
-                                                        {stats.lastTimeTaken !== undefined && (
-                                                            <View style={styles.statChip}>
-                                                                <MaterialCommunityIcons name="clock-outline" size={12} color="#fff" style={{ marginRight: 2 }} />
-                                                                <Text style={styles.statText}>{formatTime(stats.lastTimeTaken)}</Text>
-                                                            </View>
-                                                        )}
-                                                        {stats.lastPlayed && (
-                                                            <View style={styles.statChip}>
-                                                                <MaterialCommunityIcons name="calendar-clock" size={12} color="#fff" style={{ marginRight: 2 }} />
-                                                                <Text style={styles.statText}>Played</Text>
-                                                            </View>
-                                                        )}
+                                            {/* Stats Display - Simplified for Mobile Bento */}
+                                            {stats && (
+                                                <View style={[styles.statsRow, isMobile && { justifyContent: 'center', marginTop: 4 }]}>
+                                                    <View style={styles.statBadge}>
+                                                        <MaterialCommunityIcons name="trophy-variant" size={isMobile ? 10 : 12} color={isDark ? '#FCD34D' : '#F59E0B'} />
+                                                        <Text style={[styles.statText, isMobile && { fontSize: 10 }]}>{stats.highScore}</Text>
                                                     </View>
-                                                )}
-
-                                                {/* Proficiency Badge */}
-                                                {stats?.proficiency && stats.proficiency !== 'Not Rated' && (
-                                                    <View style={[styles.proficiencyBadge, {
-                                                        backgroundColor: stats.proficiency === 'Advanced' ? '#4CAF50' :
-                                                            stats.proficiency === 'Proficient' ? '#2196F3' :
-                                                                stats.proficiency === 'Developing' ? '#FFC107' : '#FF5252'
-                                                    }]}>
-                                                        <Text style={styles.proficiencyText}>{stats.proficiency}</Text>
-                                                    </View>
-                                                )}
-                                            </View>
-                                            <View style={styles.playButton}>
-                                                <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
-                                            </View>
+                                                </View>
+                                            )}
                                         </View>
 
+
+                                        {/* Badge */}
                                         {(game.isNew || game.isPopular) && !stats && (
                                             <View style={[
                                                 styles.badge,
-                                                { backgroundColor: game.isNew ? '#2979FF' : '#FFC107' }
+                                                { backgroundColor: game.isNew ? '#6366F1' : '#F59E0B' }
                                             ]}>
-                                                <Text style={[
-                                                    styles.badgeText,
-                                                    { color: game.isNew ? '#fff' : '#3E2723' }
-                                                ]}>
+                                                <Text style={styles.badgeText}>
                                                     {game.isNew ? 'NEW' : 'HOT'}
                                                 </Text>
                                             </View>
                                         )}
                                     </LinearGradient>
-                                </Surface>
-                            </TouchableOpacity>
-                        </Animated.View>
-                    );
-                })}
-            </View>
-        </Animated.View>
-    );
+                                </TouchableOpacity>
+                            </Animated.View>
+
+                        );
+                    })
+                    }
+                </View >
+            </Animated.View >
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -295,26 +318,13 @@ const GamesScreen = ({ navigation }: any) => {
                 contentContainerStyle={{ paddingBottom: 100, paddingTop: insets.top }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <LinearGradient
-                    colors={['#3F51B5', '#5C6BC0', '#7986CB']}
-                    style={styles.headerBackground}
-                >
-                    <View style={[styles.decorativeCircle, { top: -50, right: -50, width: 200, height: 200 }]} />
-                    <View style={[styles.decorativeCircle, { bottom: -30, left: -40, width: 140, height: 140 }]} />
+                <UnifiedHeader
+                    title="Game Zone"
+                    subtitle="Play to learn! 🎮"
+                    icon="gamepad-variant"
+                />
 
-                    <View style={styles.headerContent}>
-                        <View>
-                            <Text style={styles.headerTitle}>Game Zone</Text>
-                            <Text style={styles.headerSubtitle}>Play to learn! 🎮</Text>
-                        </View>
-                        <View style={styles.headerIcon}>
-                            <MaterialCommunityIcons name="gamepad-variant" size={36} color="#fff" />
-                        </View>
-                    </View>
-                </LinearGradient>
-
-                <View style={styles.contentContainer}>
+                <View style={[styles.contentContainer, { marginTop: -40, paddingBottom: 120 }]}>
                     {renderSection('Science Lab', 'flask', groupedGames.Science, 0)}
                     {renderSection('Math Zone', 'calculator', groupedGames.Math, 200)}
                     {renderSection('Brain Teasers', 'puzzle', groupedGames.Logic, 400)}
@@ -328,19 +338,22 @@ const GamesScreen = ({ navigation }: any) => {
 const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#121212' : '#F5F7FA',
+        backgroundColor: isDark ? '#0F172A' : '#F8FAFC',
     },
     scrollView: {
         flex: 1,
     },
     headerBackground: {
-        paddingVertical: 30,
-        paddingHorizontal: spacing.lg,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        marginBottom: spacing.md,
-        overflow: 'hidden',
-        position: 'relative'
+        paddingVertical: spacing.xl,
+        paddingHorizontal: spacing.xl,
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        marginBottom: spacing.lg,
+        shadowColor: '#6366F1',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 15,
+        elevation: 10,
     },
     decorativeCircle: {
         position: 'absolute',
@@ -351,13 +364,16 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: spacing.md
+        marginTop: spacing.md,
+        width: '100%',
+        maxWidth: 1000,
+        alignSelf: 'center',
     },
     headerTitle: {
         fontSize: 32,
-        fontWeight: 'bold',
+        fontWeight: '800',
         color: '#fff',
-        letterSpacing: 0.5
+        letterSpacing: -1
     },
     headerSubtitle: {
         fontSize: 16,
@@ -376,6 +392,9 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     },
     contentContainer: {
         padding: spacing.lg,
+        width: '100%',
+        maxWidth: 1000,
+        alignSelf: 'center',
     },
     sectionContainer: {
         marginBottom: spacing.xl,
@@ -394,9 +413,20 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
         marginRight: spacing.sm,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: isDark ? '#fff' : '#333',
+        fontSize: 22,
+        fontWeight: '800',
+        color: isDark ? '#F8FAFC' : '#0F172A',
+        flex: 1,
+        letterSpacing: -0.5,
+    },
+    sectionCount: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: isDark ? '#888' : '#888',
+        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
     gamesGrid: {
         flexDirection: 'row',
@@ -409,60 +439,65 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     },
     gameCard: {
         borderRadius: 20,
-        overflow: 'hidden',
-        height: 120,
-    },
-    gameCardGradient: {
-        flex: 1,
-        padding: spacing.md,
-        position: 'relative',
-        justifyContent: 'center'
-    },
-    cardContent: {
+        padding: spacing.lg,
         flexDirection: 'row',
         alignItems: 'center',
-        zIndex: 2,
+        marginBottom: spacing.sm,
+        borderWidth: 1,
+        borderColor: isDark ? '#334155' : '#E2E8F0',
+        shadowColor: isDark ? '#000' : '#1E293B',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.5 : 0.08,
+        shadowRadius: 12,
+        elevation: 3,
     },
-    iconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'rgba(255,255,255,0.2)',
+    iconBox: {
+        width: 64,
+        height: 64,
+        borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: spacing.md
+        marginRight: spacing.md,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    textContainer: {
+    gameInfo: {
         flex: 1,
     },
     gameTitle: {
-        color: '#fff',
+        color: isDark ? '#F8FAFC' : '#0F172A',
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 2
+        fontWeight: '800',
+        marginBottom: 4,
+        letterSpacing: -0.3,
     },
     gameDesc: {
-        color: 'rgba(255,255,255,0.85)',
-        fontSize: 12,
-        fontWeight: '500'
+        color: isDark ? '#94A3B8' : '#64748B',
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 6,
     },
     statsRow: {
         flexDirection: 'row',
-        marginTop: 6,
         gap: 8,
+        marginTop: 2,
     },
-    statChip: {
+    statBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
         borderRadius: 8,
+        backgroundColor: isDark ? '#334155' : '#F1F5F9',
     },
     statText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
+        fontSize: 11,
+        fontWeight: '700',
+        color: isDark ? '#94A3B8' : '#64748B',
     },
     playButton: {
         width: 32,
@@ -482,16 +517,18 @@ const createStyles = (isDark: boolean, isMobile: boolean) => StyleSheet.create({
     },
     badge: {
         position: 'absolute',
-        top: 10,
-        right: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 2,
+        top: 12,
+        right: 12,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
         borderRadius: 12,
         zIndex: 3
     },
     badgeText: {
         fontSize: 10,
-        fontWeight: 'bold'
+        fontWeight: '800',
+        color: '#fff',
+        letterSpacing: 0.5,
     },
     proficiencyBadge: {
         marginTop: 6,

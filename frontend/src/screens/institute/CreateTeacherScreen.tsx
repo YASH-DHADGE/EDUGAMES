@@ -7,10 +7,12 @@ import CustomCard from '../../components/ui/CustomCard';
 import CustomInput from '../../components/ui/CustomInput';
 import CustomButton from '../../components/ui/CustomButton';
 import api from '../../services/api';
+import SuccessModal from '../../components/ui/SuccessModal';
 
 const CreateTeacherScreen = () => {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -26,9 +28,8 @@ const CreateTeacherScreen = () => {
         setLoading(true);
         try {
             await api.post('/institute/teacher', formData);
-            Alert.alert('Success', 'Teacher account created successfully', [
-                { text: 'OK', onPress: () => navigation.goBack() }
-            ]);
+            await api.post('/institute/teacher', formData);
+            setShowSuccessModal(true);
         } catch (error: any) {
             Alert.alert('Error', error.response?.data?.message || 'Failed to create teacher');
         } finally {
@@ -81,7 +82,17 @@ const CreateTeacherScreen = () => {
                     </CustomButton>
                 </CustomCard>
             </ScrollView>
-        </GradientBackground>
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Teacher Added!"
+                message="Teacher account created successfully."
+                onClose={() => {
+                    setShowSuccessModal(false);
+                    navigation.goBack();
+                }}
+                buttonText="Back to Dashboard"
+            />
+        </GradientBackground >
     );
 };
 

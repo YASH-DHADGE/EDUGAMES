@@ -162,10 +162,10 @@ const styles = StyleSheet.create({
         pointerEvents: 'box-none',
     },
     floatingBar: {
-        width: width - 48, // More margin for floating look
-        maxWidth: 400,
-        height: 64,
-        marginBottom: 24,
+        width: Platform.OS === 'web' ? 400 : '90%', // Mobile: 90% width (smaller than before)
+        maxWidth: 380,
+        height: Platform.OS === 'web' ? 64 : 56, // Mobile: Compact height (56px)
+        marginBottom: Platform.OS === 'android' ? 40 : 24, // Mobile: Lifted up (40px) to avoid system nav overlap
         borderRadius: 32,
         overflow: 'hidden',
         shadowColor: '#000',
@@ -179,6 +179,8 @@ const styles = StyleSheet.create({
     },
     webBar: {
         marginBottom: 24,
+        width: '100%',
+        maxWidth: 400,
     },
     blurContent: {
         flex: 1,
@@ -200,20 +202,20 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     iconContainer: {
-        width: 48,
-        height: 48,
+        width: 44, // Slightly smaller touch target visual
+        height: 44,
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 24,
+        borderRadius: 22,
     },
     activeIconBg: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
     },
     activeIndicator: {
         position: 'absolute',
-        bottom: 6,
+        bottom: 4, // Adjusted for smaller height
         width: 4,
         height: 4,
         borderRadius: 2,
