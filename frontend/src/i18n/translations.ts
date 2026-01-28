@@ -3,7 +3,7 @@ export const translations = {
     en: {
         // Onboarding
         onboarding: {
-            title: 'EduGames',
+            title: 'CoreTechLabs',
             subtitle: 'Learn skills that matter to you 🚀',
             selectLanguage: 'Select Language',
             continue: 'Continue',
@@ -119,7 +119,7 @@ export const translations = {
     hi: {
         // Onboarding
         onboarding: {
-            title: 'EduGames',
+            title: 'CoreTechLabs',
             subtitle: 'वे कौशल सीखें जो आपके लिए मायने रखते हैं 🚀',
             selectLanguage: 'भाषा चुनें',
             continue: 'जारी रखें',
@@ -235,7 +235,7 @@ export const translations = {
     od: {
         // Onboarding
         onboarding: {
-            title: 'EduGames',
+            title: 'CoreTechLabs',
             subtitle: 'ଆପଣଙ୍କ ପାଇଁ ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ କୌଶଳ ଶିଖନ୍ତୁ 🚀',
             selectLanguage: 'ଭାଷା ଚୟନ କରନ୍ତୁ',
             continue: 'ଜାରି ରଖନ୍ତୁ',

@@ -11,7 +11,7 @@ import { spacing, theme } from '../theme';
 import GradientBackground from '../components/ui/GradientBackground';
 import CustomCard from '../components/ui/CustomCard';
 
-const TeacherDashboardScreen = () => {
+const TeacherApprovalsScreen = () => {
     const navigation = useNavigation();
     const { user, logout } = useAuth();
     const [pendingUsers, setPendingUsers] = useState<any[]>([]);
@@ -210,4 +210,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TeacherDashboardScreen;
+export default TeacherApprovalsScreen;

@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useResponsive } from '../hooks/useResponsive';
 
-const TeacherDashboard = ({ navigation }: any) => {
+const StudentTeacherViewScreen = ({ navigation }: any) => {
     const theme = useTheme();
     const { user } = useAuth();
     const { containerStyle, isMobile } = useResponsive();
@@ -273,4 +273,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default TeacherDashboard;
+export default StudentTeacherViewScreen;

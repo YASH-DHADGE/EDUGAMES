@@ -31,7 +31,7 @@ import SettingsScreenNew from '../screens/SettingsScreenNew';
 import PrivacySecurityScreen from '../screens/PrivacySecurityScreen';
 import RewardsScreen from '../screens/RewardsScreen';
 import SyncScreen from '../screens/SyncScreen';
-import TeacherDashboard from '../screens/TeacherDashboard';
+import StudentTeacherViewScreen from '../screens/StudentTeacherViewScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ScienceScreen from '../screens/ScienceScreen';
 import QuizScreen from '../screens/QuizScreen';
@@ -89,7 +89,7 @@ const MainNavigator = () => {
             <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />
             <Stack.Screen name="Rewards" component={RewardsScreen} />
             <Stack.Screen name="Sync" component={SyncScreen} />
-            <Stack.Screen name="TeacherDashboard" component={TeacherDashboard} />
+            <Stack.Screen name="TeacherDashboard" component={StudentTeacherViewScreen} />
             <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
             <Stack.Screen name="Science" component={ScienceScreen} />
             <Stack.Screen name="Quiz" component={QuizScreen} />

@@ -62,7 +62,23 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    console.log(`Local: http://localhost:${PORT}`);
-    console.log(`Network: http://192.168.1.7:${PORT}`);
+    console.log('\n\x1b[35m╔════════════════════════════════════════════════════════════╗\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m  \x1b[1m\x1b[36m🚀  CoreTechLabs Backend Server\x1b[0m                        \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m  \x1b[2m\x1b[37m    Educational Gaming Platform API\x1b[0m                    \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m╠════════════════════════════════════════════════════════════╣\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log(`\x1b[35m║\x1b[0m  \x1b[33m📍 Environment:\x1b[0m  \x1b[32m${(process.env.NODE_ENV || 'development').padEnd(37)}\x1b[0m\x1b[35m║\x1b[0m`);
+    console.log(`\x1b[35m║\x1b[0m  \x1b[33m🌐 Port:\x1b[0m         \x1b[32m${String(PORT).padEnd(37)}\x1b[0m\x1b[35m║\x1b[0m`);
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log(`\x1b[35m║\x1b[0m  \x1b[36m🔗 Local:\x1b[0m        \x1b[4m\x1b[34mhttp://localhost:${PORT}\x1b[0m${' '.repeat(37 - String(PORT).length - 16)}\x1b[35m║\x1b[0m`);
+    console.log(`\x1b[35m║\x1b[0m  \x1b[36m🌍 Network:\x1b[0m      \x1b[4m\x1b[34mhttp://192.168.1.7:${PORT}\x1b[0m${' '.repeat(37 - String(PORT).length - 19)}\x1b[35m║\x1b[0m`);
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m╠════════════════════════════════════════════════════════════╣\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m  \x1b[1m\x1b[32m✨ Server is ready to handle requests!\x1b[0m                \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m  \x1b[2m\x1b[90m   Press Ctrl+C to stop the server\x1b[0m                    \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m║\x1b[0m                                                            \x1b[35m║\x1b[0m');
+    console.log('\x1b[35m╚════════════════════════════════════════════════════════════╝\x1b[0m\n');
 });

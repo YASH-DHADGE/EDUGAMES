@@ -7,7 +7,7 @@ import EditStudentScreen from '../screens/teacher/EditStudentScreen';
 import ChapterAssignScreen from '../screens/teacher/ChapterAssignScreen';
 import TeacherContentManagerScreen from '../screens/teacher/TeacherContentManagerScreen';
 import TeacherQuizCreatorScreen from '../screens/teacher/TeacherQuizCreatorScreen';
-import TeacherDashboardScreen from '../screens/TeacherDashboardScreen';
+import TeacherApprovalsScreen from '../screens/TeacherApprovalsScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import StudentAnalyticsScreen from '../screens/teacher/StudentAnalyticsScreen';;
 import TeacherAnalyticsScreen from '../screens/teacher/TeacherAnalyticsScreen';
@@ -30,7 +30,7 @@ const TeacherNavigator = () => {
             <Stack.Screen name="ChapterAssign" component={ChapterAssignScreen} />
             <Stack.Screen name="TeacherContentManager" component={TeacherContentManagerScreen} />
             <Stack.Screen name="TeacherQuizCreator" component={TeacherQuizCreatorScreen} />
-            <Stack.Screen name="TeacherApprovals" component={TeacherDashboardScreen} />
+            <Stack.Screen name="TeacherApprovals" component={TeacherApprovalsScreen} />
             <Stack.Screen name="Notifications" component={NotificationScreen} />
             <Stack.Screen name="StudentAnalytics" component={StudentAnalyticsScreen} />
             <Stack.Screen name="TeacherAnalytics" component={TeacherAnalyticsScreen} />

@@ -1,7 +1,7 @@
 {
-    "name": "rural-learning-backend",
+    "name": "coretechlabs-backend",
     "version": "1.0.0",
-    "description": "Backend API for Rural Learning App",
+    "description": "Backend API for CoreTechLabs Educational Platform",
     "main": "server.js",
     "scripts": {
         "start": "node server.js",
