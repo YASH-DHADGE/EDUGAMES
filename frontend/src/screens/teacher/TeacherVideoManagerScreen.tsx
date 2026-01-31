@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
     View,
-    Text,
     StyleSheet,
     FlatList,
     Image,
@@ -10,24 +9,33 @@ import {
     Alert,
     Modal,
     ScrollView,
-    ActivityIndicator
+    ActivityIndicator,
+    useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { Surface, Button, Text } from 'react-native-paper';
 import videoService, { Video } from '../../services/videoService';
 import { useAuth } from '../../context/AuthContext';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const TeacherVideoManagerScreen = ({ navigation }: any) => {
     const insets = useSafeAreaInsets();
-    const { user } = useAuth();
+    const { isDark } = useAppTheme();
+    const { isDesktop, maxContentWidth } = useResponsive();
+    const { width } = useWindowDimensions();
 
     const [videos, setVideos] = useState<Video[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Modal State
+    // Form/Modal State
     const [modalVisible, setModalVisible] = useState(false);
+    const [editingVideo, setEditingVideo] = useState<Video | null>(null);
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [description, setDescription] = useState('');
@@ -35,9 +43,11 @@ const TeacherVideoManagerScreen = ({ navigation }: any) => {
     const [classNum, setClassNum] = useState('6');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Constants
     const subjects = ['Mathematics', 'Science', 'English', 'Social Studies', 'Hindi', 'Computer'];
     const classes = ['6', '7', '8', '9', '10'];
 
+    // Delete State
     const [deleteModalVisible, setDeleteModalVisible] = useState(false);
     const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
 
@@ -47,67 +57,30 @@ const TeacherVideoManagerScreen = ({ navigation }: any) => {
 
     const loadVideos = async () => {
         try {
-            const response = await videoService.getVideos(); // Fetch all, backend might filter by creator if needed
+            const response = await videoService.getVideos();
             setVideos(response.data);
         } catch (error) {
-            Alert.alert('Error', 'Failed to load videos');
+            console.error('Failed to load videos', error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    const handleAddVideo = async () => {
-        if (!title || !url || !subject || !classNum) {
-            Alert.alert('Error', 'Please fill all required fields');
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            await videoService.createVideo({
-                title,
-                url,
-                description,
-                subject,
-                class: parseInt(classNum),
-            });
-            Alert.alert('Success', 'Video added successfully');
-            setModalVisible(false);
-            resetForm();
-            loadVideos();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to add video. Check URL.');
-        } finally {
-            setIsSubmitting(false);
-        }
+    const openAddModal = () => {
+        setEditingVideo(null);
+        resetForm();
+        setModalVisible(true);
     };
 
-    const handleDeleteVideo = (id: string) => {
-        setVideoToDelete(id);
-        setDeleteModalVisible(true);
-    };
-
-    const confirmDelete = async () => {
-        if (!videoToDelete) return;
-
-        setIsSubmitting(true);
-        try {
-            console.log('Deleting video with ID:', videoToDelete);
-            await videoService.deleteVideo(videoToDelete);
-            setVideos(prev => prev.filter(v => v._id !== videoToDelete)); // Optimistic update
-
-            // Only show toast/alert if needed, or just close modal
-            // Alert.alert('Success', 'Video deleted successfully'); 
-        } catch (error: any) {
-            console.error('Delete error:', error);
-            const errorMessage = error.response?.data?.error || error.message || 'Failed to delete video';
-            Alert.alert('Error', errorMessage);
-        } finally {
-            setIsSubmitting(false);
-            setDeleteModalVisible(false);
-            setVideoToDelete(null);
-        }
+    const openEditModal = (video: Video) => {
+        setEditingVideo(video);
+        setTitle(video.title);
+        setUrl(video.url);
+        setDescription(video.description || '');
+        setSubject(video.subject);
+        setClassNum(video.class.toString());
+        setModalVisible(true);
     };
 
     const resetForm = () => {
@@ -118,313 +91,576 @@ const TeacherVideoManagerScreen = ({ navigation }: any) => {
         setClassNum('6');
     };
 
-    const renderVideoItem = ({ item }: { item: Video }) => (
-        <View style={styles.videoCard}>
-            <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-            <View style={styles.videoInfo}>
-                <Text style={styles.videoTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.videoMeta}>{item.subject} • Class {item.class}</Text>
-                <View style={styles.actionRow}>
-                    <TouchableOpacity
-                        onPress={() => handleDeleteVideo(item._id)}
-                        style={styles.deleteBtn}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                        <MaterialCommunityIcons name="delete" size={20} color="#FF5252" />
-                        <Text style={styles.deleteText}>Delete</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </View>
-    );
+    const extractVideoId = (inputUrl: string) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = inputUrl.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
 
-    return (
-        <View style={styles.container}>
-            <LinearGradient
-                colors={['#4A00E0', '#8E2DE2']}
-                style={[styles.header, { paddingTop: insets.top + 10 }]}
-            >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Manage Videos</Text>
-                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-                    <MaterialCommunityIcons name="plus" size={24} color="#4A00E0" />
-                </TouchableOpacity>
-            </LinearGradient>
+    const handleSubmit = async () => {
+        if (!title || !url || !subject || !classNum) {
+            Alert.alert('Missing Fields', 'Please fill all required fields (Title, URL, Subject, Class).');
+            return;
+        }
 
-            {loading ? (
-                <ActivityIndicator size="large" color="#4A00E0" style={{ marginTop: 50 }} />
-            ) : (
-                <FlatList
-                    data={videos}
-                    keyExtractor={item => item._id}
-                    renderItem={renderVideoItem}
-                    contentContainerStyle={styles.listContent}
-                    refreshing={refreshing}
-                    onRefresh={() => {
-                        setRefreshing(true);
-                        loadVideos();
-                    }}
-                    ListEmptyComponent={
-                        <Text style={styles.emptyText}>No videos added yet. Tap + to add.</Text>
-                    }
-                />
-            )}
+        const videoId = extractVideoId(url);
+        if (!videoId) {
+            Alert.alert('Invalid URL', 'Please enter a valid YouTube URL.');
+            return;
+        }
 
-            {/* Add Video Modal */}
-            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Add New Video</Text>
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <MaterialCommunityIcons name="close" size={24} color="#333" />
-                        </TouchableOpacity>
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                title,
+                url,
+                videoId, // Ensure we save the extracted ID if the backend expects it, though service might do it. 
+                // Assuming backend needs 'url' primarily and maybe extracts ID itself, 
+                // but standard practice is often to send both if needed.
+                // Based on existing code, we strictly send what was there. 
+                description,
+                subject,
+                class: parseInt(classNum),
+            };
+
+            if (editingVideo) {
+                await videoService.updateVideo(editingVideo._id, payload);
+                Alert.alert('Success', 'Video updated successfully');
+            } else {
+                await videoService.createVideo(payload);
+                Alert.alert('Success', 'Video added successfully');
+            }
+
+            setModalVisible(false);
+            loadVideos();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to save video. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const confirmDelete = async () => {
+        if (!videoToDelete) return;
+
+        setIsSubmitting(true);
+        try {
+            await videoService.deleteVideo(videoToDelete);
+            setVideos(prev => prev.filter(v => v._id !== videoToDelete));
+            setDeleteModalVisible(false);
+            setVideoToDelete(null);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to delete video.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const renderVideoItem = ({ item, index }: { item: Video; index: number }) => (
+        <Animated.View
+            entering={FadeInDown.delay(index * 50).springify()}
+            style={[
+                styles.cardWrapper,
+                isDesktop ? { width: '49%' } : { width: '100%' } // Adjusted width slightly to avoid edge cases
+            ]}
+        >
+            <Surface style={[styles.videoCard, { backgroundColor: isDark ? '#1E293B' : '#fff', borderColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                {/* Thumbnail Section */}
+                <View style={styles.thumbnailContainer}>
+                    <Image
+                        source={{ uri: item.thumbnail || `https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg` }}
+                        style={styles.thumbnail}
+                        resizeMode="cover"
+                    />
+                    <View style={styles.classBadge}>
+                        <Text style={styles.classBadgeText}>Class {item.class}</Text>
                     </View>
-                    <ScrollView contentContainerStyle={styles.formContent}>
-                        <Text style={styles.label}>Title*</Text>
-                        <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Enter video title" />
+                </View>
 
-                        <Text style={styles.label}>YouTube URL*</Text>
-                        <TextInput style={styles.input} value={url} onChangeText={setUrl} placeholder="https://youtube.com/watch?v=..." autoCapitalize="none" />
-
-                        <Text style={styles.label}>Description</Text>
-                        <TextInput style={[styles.input, styles.textArea]} value={description} onChangeText={setDescription} multiline numberOfLines={3} placeholder="Video description (optional)" />
-
-                        <View style={styles.row}>
-                            <View style={{ flex: 1, marginRight: 10 }}>
-                                <Text style={styles.label}>Class*</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
-                                    {classes.map(c => (
-                                        <TouchableOpacity
-                                            key={c}
-                                            style={[styles.chip, classNum === c && styles.activeChip]}
-                                            onPress={() => setClassNum(c)}
-                                        >
-                                            <Text style={[styles.chipText, classNum === c && styles.activeChipText]}>{c}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
+                {/* Content Section */}
+                <View style={styles.cardContent}>
+                    <View>
+                        <View style={styles.tagRow}>
+                            <View style={[styles.subjectTag, { backgroundColor: isDark ? 'rgba(79, 70, 229, 0.2)' : '#EEF2FF' }]}>
+                                <Text style={[styles.subjectText, { color: '#4F46E5' }]}>{item.subject}</Text>
                             </View>
                         </View>
 
-                        <Text style={styles.label}>Subject*</Text>
-                        <View style={styles.wrapGrid}>
-                            {subjects.map(s => (
-                                <TouchableOpacity
-                                    key={s}
-                                    style={[styles.chip, subject === s && styles.activeChip]}
-                                    onPress={() => setSubject(s)}
-                                >
-                                    <Text style={[styles.chipText, subject === s && styles.activeChipText]}>{s}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <TouchableOpacity
-                            style={[styles.submitBtn, isSubmitting && styles.disabledBtn]}
-                            onPress={handleAddVideo}
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.submitBtnText}>Add Video</Text>
-                            )}
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
-            </Modal>
-
-            {/* Delete Confirmation Modal */}
-            <Modal visible={deleteModalVisible} transparent animationType="fade">
-                <View style={styles.deleteModalOverlay}>
-                    <View style={styles.deleteModalContent}>
-                        <View style={styles.deleteIconContainer}>
-                            <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#FF5252" />
-                        </View>
-                        <Text style={styles.deleteModalTitle}>Delete Video?</Text>
-                        <Text style={styles.deleteModalText}>
-                            Are you sure you want to delete this video? This action cannot be undone.
+                        <Text style={[styles.videoTitle, { color: isDark ? '#fff' : '#1F2937' }]} numberOfLines={2}>
+                            {item.title}
                         </Text>
-                        <View style={styles.deleteModalActions}>
+
+                        {item.description ? (
+                            <Text style={[styles.videoDesc, { color: isDark ? '#94A3B8' : '#6B7280' }]} numberOfLines={2}>
+                                {item.description}
+                            </Text>
+                        ) : null}
+                    </View>
+
+                    <View style={styles.bottomSection}>
+                        <View style={styles.divider} />
+
+                        <View style={styles.actionRow}>
                             <TouchableOpacity
-                                style={[styles.modalBtn, styles.cancelBtn]}
-                                onPress={() => setDeleteModalVisible(false)}
-                                disabled={isSubmitting}
+                                onPress={() => openEditModal(item)}
+                                style={[styles.actionBtn, { backgroundColor: isDark ? '#334155' : '#F3F4F6' }]}
                             >
-                                <Text style={styles.cancelBtnText}>Cancel</Text>
+                                <MaterialCommunityIcons name="pencil" size={18} color={isDark ? '#CBD5E1' : '#4B5563'} />
+                                <Text style={[styles.actionText, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Edit</Text>
                             </TouchableOpacity>
+
                             <TouchableOpacity
-                                style={[styles.modalBtn, styles.confirmDeleteBtn]}
-                                onPress={confirmDelete}
-                                disabled={isSubmitting}
+                                onPress={() => {
+                                    setVideoToDelete(item._id);
+                                    setDeleteModalVisible(true);
+                                }}
+                                style={[styles.actionBtn, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2' }]}
                             >
-                                {isSubmitting ? (
-                                    <ActivityIndicator size="small" color="#fff" />
-                                ) : (
-                                    <Text style={styles.confirmDeleteBtnText}>Delete</Text>
-                                )}
+                                <MaterialCommunityIcons name="delete-outline" size={18} color="#EF4444" />
+                                <Text style={[styles.actionText, { color: '#EF4444' }]}>Delete</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
-            </Modal>
-        </View>
+            </Surface>
+        </Animated.View>
+    );
+
+    return (
+        <ScreenBackground>
+            <View style={{ flex: 1 }}>
+                <CompactHeader
+                    title="Video Library"
+                    subtitle="Manage educational content"
+                    onBack={() => navigation.goBack()}
+                    rightComponent={
+                        <TouchableOpacity
+                            onPress={openAddModal}
+                            style={styles.headerAddBtn}
+                        >
+                            <MaterialCommunityIcons name="plus" size={24} color="#4F46E5" />
+                        </TouchableOpacity>
+                    }
+                />
+
+                <View style={[styles.container, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
+                    {loading ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color="#4F46E5" />
+                        </View>
+                    ) : (
+                        <FlatList
+                            data={videos}
+                            keyExtractor={item => item._id}
+                            renderItem={renderVideoItem}
+                            numColumns={isDesktop ? 2 : 1}
+                            columnWrapperStyle={isDesktop ? { justifyContent: 'space-between' } : undefined}
+                            contentContainerStyle={styles.listContent}
+                            refreshing={refreshing}
+                            onRefresh={() => {
+                                setRefreshing(true);
+                                loadVideos();
+                            }}
+                            showsVerticalScrollIndicator={false}
+                            ListEmptyComponent={
+                                <View style={styles.emptyContainer}>
+                                    <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                                        <MaterialCommunityIcons name="filmstrip-off" size={48} color={isDark ? '#475569' : '#94A3B8'} />
+                                    </View>
+                                    <Text style={[styles.emptyText, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                                        No videos found. Tap the + icon to add one!
+                                    </Text>
+                                    <Button mode="contained" onPress={openAddModal} style={{ marginTop: 20, backgroundColor: '#4F46E5' }}>
+                                        Add First Video
+                                    </Button>
+                                </View>
+                            }
+                        />
+                    )}
+                </View>
+
+                {/* Add/Edit Modal */}
+                <Modal visible={modalVisible} animationType="slide" presentationStyle="formSheet">
+                    <View style={[styles.modalContainer, { backgroundColor: isDark ? '#0F172A' : '#fff' }]}>
+                        <View style={[styles.modalHeader, { borderBottomColor: isDark ? '#334155' : '#E2E8F0' }]}>
+                            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#1F2937' }]}>
+                                {editingVideo ? 'Edit Video' : 'Add New Video'}
+                            </Text>
+                            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
+                                <Ionicons name="close" size={24} color={isDark ? '#94A3B8' : '#64748B'} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView contentContainerStyle={styles.formContent}>
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>TITLE</Text>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: isDark ? '#1E293B' : '#F9FAFB', borderColor: isDark ? '#334155' : '#E5E7EB', color: isDark ? '#fff' : '#1F2937' }]}
+                                    value={title}
+                                    onChangeText={setTitle}
+                                    placeholder="e.g. Introduction to Algebra"
+                                    placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
+                                />
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>YOUTUBE URL</Text>
+                                <TextInput
+                                    style={[styles.input, { backgroundColor: isDark ? '#1E293B' : '#F9FAFB', borderColor: isDark ? '#334155' : '#E5E7EB', color: isDark ? '#fff' : '#1F2937' }]}
+                                    value={url}
+                                    onChangeText={setUrl}
+                                    placeholder="https://youtube.com/watch?v=..."
+                                    placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
+                                    autoCapitalize="none"
+                                />
+                            </View>
+
+                            <View style={styles.row}>
+                                <View style={[styles.formGroup, { flex: 1, marginRight: 10 }]}>
+                                    <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>CLASS</Text>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipScroll}>
+                                        {classes.map(c => (
+                                            <TouchableOpacity
+                                                key={c}
+                                                onPress={() => setClassNum(c)}
+                                                style={[
+                                                    styles.chip,
+                                                    classNum === c && { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+                                                    { borderColor: isDark ? '#334155' : '#E5E7EB', borderWidth: 1 }
+                                                ]}
+                                            >
+                                                <Text style={[styles.chipText, classNum === c && { color: '#fff' }, { color: classNum === c ? '#fff' : (isDark ? '#94A3B8' : '#64748B') }]}>{c}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>SUBJECT</Text>
+                                <View style={styles.wrapTags}>
+                                    {subjects.map(s => (
+                                        <TouchableOpacity
+                                            key={s}
+                                            onPress={() => setSubject(s)}
+                                            style={[
+                                                styles.chip,
+                                                subject === s && { backgroundColor: '#4F46E5', borderColor: '#4F46E5' },
+                                                { borderColor: isDark ? '#334155' : '#E5E7EB', borderWidth: 1, marginBottom: 8 }
+                                            ]}
+                                        >
+                                            <Text style={[styles.chipText, subject === s && { color: '#fff' }, { color: subject === s ? '#fff' : (isDark ? '#94A3B8' : '#64748B') }]}>{s}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={styles.formGroup}>
+                                <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>DESCRIPTION (OPTIONAL)</Text>
+                                <TextInput
+                                    style={[styles.input, styles.textArea, { backgroundColor: isDark ? '#1E293B' : '#F9FAFB', borderColor: isDark ? '#334155' : '#E5E7EB', color: isDark ? '#fff' : '#1F2937' }]}
+                                    value={description}
+                                    onChangeText={setDescription}
+                                    placeholder="What is this video about?"
+                                    placeholderTextColor={isDark ? '#64748B' : '#9CA3AF'}
+                                    multiline
+                                    textAlignVertical="top"
+                                />
+                            </View>
+
+                            <Button
+                                mode="contained"
+                                onPress={handleSubmit}
+                                loading={isSubmitting}
+                                disabled={isSubmitting}
+                                style={styles.saveBtn}
+                                contentStyle={{ height: 50 }}
+                            >
+                                {editingVideo ? 'Update Video' : 'Add Video'}
+                            </Button>
+                        </ScrollView>
+                    </View>
+                </Modal>
+
+                {/* Delete Confirmation */}
+                <Modal visible={deleteModalVisible} transparent animationType="fade">
+                    <View style={styles.deleteOverlay}>
+                        <Surface style={[styles.deleteModal, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
+                            <View style={styles.deleteIcon}>
+                                <MaterialCommunityIcons name="trash-can-outline" size={32} color="#EF4444" />
+                            </View>
+                            <Text style={[styles.deleteTitle, { color: isDark ? '#fff' : '#1F2937' }]}>Delete Video</Text>
+                            <Text style={[styles.deleteMsg, { color: isDark ? '#94A3B8' : '#6B7280' }]}>
+                                Are you sure you want to delete this video? This cannot be undone.
+                            </Text>
+                            <View style={styles.deleteActions}>
+                                <Button
+                                    mode="outlined"
+                                    onPress={() => setDeleteModalVisible(false)}
+                                    style={{ flex: 1, borderColor: isDark ? '#334155' : '#E5E7EB' }}
+                                    textColor={isDark ? '#CBD5E1' : '#4B5563'}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    mode="contained"
+                                    onPress={confirmDelete}
+                                    style={{ flex: 1, backgroundColor: '#EF4444', marginLeft: 10 }}
+                                    loading={isSubmitting}
+                                >
+                                    Delete
+                                </Button>
+                            </View>
+                        </Surface>
+                    </View>
+                </Modal>
+
+            </View>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F5F7FA' },
-    header: {
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+    container: {
+        flex: 1,
     },
-    backButton: { padding: 4 },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-    addButton: {
+    headerAddBtn: {
         backgroundColor: '#fff',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        padding: 8,
+        borderRadius: 10,
+    },
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    listContent: { padding: 20, gap: 16 },
+    listContent: {
+        padding: 16,
+        paddingBottom: 40,
+        gap: 16,
+    },
+    cardWrapper: {
+        marginBottom: 16,
+    },
     videoCard: {
-        flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 12,
+        flex: 1,
+        borderRadius: 16,
         overflow: 'hidden',
-        padding: 10,
+        borderWidth: 1,
         elevation: 2,
     },
-    thumbnail: { width: 100, height: 70, borderRadius: 8, backgroundColor: '#eee' },
-    videoInfo: { flex: 1, marginLeft: 12, justifyContent: 'center' },
-    videoTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
-    videoMeta: { fontSize: 12, color: '#666', marginBottom: 8 },
-    actionRow: { flexDirection: 'row' },
-    deleteBtn: { flexDirection: 'row', alignItems: 'center', padding: 4 },
-    deleteText: { color: '#FF5252', fontSize: 12, marginLeft: 4, fontWeight: '600' },
-    emptyText: { textAlign: 'center', color: '#999', marginTop: 40 },
+    thumbnailContainer: {
+        height: 160,
+        width: '100%',
+        backgroundColor: '#000',
+    },
+    thumbnail: {
+        width: '100%',
+        height: '100%',
+    },
+    classBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'rgba(0,0,0,0.75)',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+    },
+    classBadgeText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    cardContent: {
+        flex: 1,
+        padding: 16,
+    },
+    bottomSection: {
+        marginTop: 'auto',
+    },
+    tagRow: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    subjectTag: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    subjectText: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    videoTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        marginBottom: 6,
+        lineHeight: 22,
+    },
+    videoDesc: {
+        fontSize: 13,
+        lineHeight: 18,
+        marginBottom: 16,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: 'transparent',
+        marginBottom: 12,
+    },
+    actionRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    actionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 6,
+    },
+    actionText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 40,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    emptyText: {
+        fontSize: 16,
+        textAlign: 'center',
+        lineHeight: 24,
+    },
 
     // Modal
-    modalContainer: { flex: 1, backgroundColor: '#fff', paddingTop: 20 },
+    modalContainer: {
+        flex: 1,
+    },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingBottom: 20,
+        padding: 20,
+        paddingTop: 24,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
     },
-    modalTitle: { fontSize: 18, fontWeight: 'bold' },
-    formContent: { padding: 20 },
-    label: { fontSize: 14, fontWeight: '600', marginBottom: 8, color: '#333' },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    closeBtn: {
+        padding: 4,
+        borderRadius: 20,
+    },
+    formContent: {
+        padding: 24,
+        width: '100%',
+        maxWidth: 600,
+        alignSelf: 'center',
+    },
+    formGroup: {
+        marginBottom: 24,
+    },
+    label: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginBottom: 8,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
+    },
     input: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 16,
     },
-    textArea: { height: 80, textAlignVertical: 'top' },
-    row: { flexDirection: 'row', marginBottom: 16 },
-    chipContainer: { flexDirection: 'row' },
-    wrapGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+    textArea: {
+        height: 120,
+        textAlignVertical: 'top',
+    },
+    row: {
+        flexDirection: 'row',
+        marginBottom: 24,
+    },
+    chipScroll: {
+        gap: 8,
+        paddingVertical: 4,
+    },
+    wrapTags: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
     chip: {
         paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
-        marginRight: 8,
-        marginBottom: 8,
-    },
-    activeChip: { backgroundColor: '#4A00E0' },
-    chipText: { color: '#666', fontSize: 13 },
-    activeChipText: { color: '#fff', fontWeight: 'bold' },
-    submitBtn: {
-        backgroundColor: '#4A00E0',
-        padding: 16,
+        paddingVertical: 10,
         borderRadius: 12,
-        alignItems: 'center',
+        borderWidth: 1,
     },
-    disabledBtn: { opacity: 0.7 },
-    submitBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+    chipText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    saveBtn: {
+        marginTop: 16,
+        borderRadius: 12,
+        paddingVertical: 6,
+        backgroundColor: '#4F46E5',
+    },
 
     // Delete Modal
-    deleteModalOverlay: {
+    deleteOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.6)',
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
     },
-    deleteModalContent: {
-        backgroundColor: '#fff',
+    deleteModal: {
+        width: '100%',
+        maxWidth: 400,
         borderRadius: 24,
-        padding: 24,
-        width: '100%',
-        maxWidth: 340,
+        padding: 32,
         alignItems: 'center',
-        elevation: 5,
+        elevation: 8,
     },
-    deleteIconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#FFEBEE',
+    deleteIcon: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: '#FEF2F2',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 20,
     },
-    deleteModalTitle: {
-        fontSize: 20,
+    deleteTitle: {
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 8,
+        marginBottom: 12,
     },
-    deleteModalText: {
-        fontSize: 14,
-        color: '#666',
+    deleteMsg: {
+        fontSize: 15,
         textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 20,
+        marginBottom: 32,
+        lineHeight: 22,
     },
-    deleteModalActions: {
+    deleteActions: {
         flexDirection: 'row',
-        gap: 12,
         width: '100%',
-    },
-    modalBtn: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    cancelBtn: {
-        backgroundColor: '#F5F5F5',
-    },
-    confirmDeleteBtn: {
-        backgroundColor: '#FF5252',
-    },
-    cancelBtnText: {
-        color: '#666',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    confirmDeleteBtnText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 16,
+        gap: 16,
     },
 });
 

@@ -1,15 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, useWindowDimensions, Modal, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import api from '../../services/api';
 
 const TeacherClassroomScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
+    const { isDark } = useAppTheme();
+    const { isMobile, containerStyle } = useResponsive();
+
     const [content, setContent] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
     useEffect(() => {
         fetchContent();
@@ -39,42 +49,21 @@ const TeacherClassroomScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
-            {/* Gradient Header */}
-            <LinearGradient
-                colors={['#6200EA', '#7C4DFF']}
-                style={styles.header}
-            >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>Classroom Preview</Text>
-                    <Text style={styles.headerSubtitle}>Your created content</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => {
-                        Alert.alert(
-                            'Create Content',
-                            'What would you like to create?',
-                            [
-                                { text: 'Cancel', style: 'cancel' },
-                                {
-                                    text: 'New Quiz',
-                                    onPress: () => (navigation as any).navigate('TeacherQuizCreator')
-                                },
-                                {
-                                    text: 'New Chapter',
-                                    onPress: () => (navigation as any).navigate('TeacherContentManager')
-                                }
-                            ]
-                        );
-                    }}
-                >
-                    <MaterialCommunityIcons name="plus" size={24} color="#6200EA" />
-                </TouchableOpacity>
-            </LinearGradient>
+        <ScreenBackground style={styles.container}>
+            {/* Compact Header */}
+            <CompactHeader
+                title="Classroom Preview"
+                subtitle="Your created content"
+                onBack={() => navigation.goBack()}
+                rightComponent={
+                    <TouchableOpacity
+                        style={{ width: 40, height: 40, backgroundColor: '#fff', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
+                        onPress={() => setShowCreateModal(true)}
+                    >
+                        <MaterialCommunityIcons name="plus" size={24} color="#4F46E5" />
+                    </TouchableOpacity>
+                }
+            />
 
             {loading ? (
                 <View style={styles.loadingContainer}>
@@ -82,29 +71,30 @@ const TeacherClassroomScreen = () => {
                 </View>
             ) : (
                 <ScrollView
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={[styles.scrollContent, containerStyle]}
                     refreshControl={
                         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6200EA" />
                     }
+                    showsVerticalScrollIndicator={false}
                 >
                     {content.length > 0 ? (
                         <>
                             <View style={styles.statsRow}>
-                                <View style={styles.statCard}>
+                                <View style={[styles.statCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
                                     <MaterialCommunityIcons name="clipboard-text" size={24} color="#EC4899" />
-                                    <Text style={styles.statValue}>{content.filter(c => c.type === 'quiz').length}</Text>
-                                    <Text style={styles.statLabel}>Quizzes</Text>
+                                    <Text style={[styles.statValue, { color: isDark ? '#fff' : '#333' }]}>{content.filter(c => c.type === 'quiz').length}</Text>
+                                    <Text style={[styles.statLabel, { color: isDark ? '#ccc' : '#666' }]}>Quizzes</Text>
                                 </View>
-                                <View style={styles.statCard}>
+                                <View style={[styles.statCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
                                     <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#059669" />
-                                    <Text style={styles.statValue}>{content.filter(c => c.type === 'chapter').length}</Text>
-                                    <Text style={styles.statLabel}>Chapters</Text>
+                                    <Text style={[styles.statValue, { color: isDark ? '#fff' : '#333' }]}>{content.filter(c => c.type === 'chapter').length}</Text>
+                                    <Text style={[styles.statLabel, { color: isDark ? '#ccc' : '#666' }]}>Chapters</Text>
                                 </View>
                             </View>
 
                             <View style={styles.contentList}>
                                 {content.map((item, index) => (
-                                    <View key={index} style={styles.contentCard}>
+                                    <View key={index} style={[styles.contentCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
                                         {/* Type Badge */}
                                         <LinearGradient
                                             colors={getTypeGradient(item.type)}
@@ -114,7 +104,7 @@ const TeacherClassroomScreen = () => {
                                         <View style={styles.cardContent}>
                                             <View style={styles.cardHeader}>
                                                 <View style={[styles.iconContainer, {
-                                                    backgroundColor: item.type === 'quiz' ? '#FCE7F3' : '#D1FAE5'
+                                                    backgroundColor: item.type === 'quiz' ? 'rgba(236, 72, 153, 0.1)' : 'rgba(5, 150, 105, 0.1)'
                                                 }]}>
                                                     <MaterialCommunityIcons
                                                         name={item.type === 'quiz' ? 'clipboard-text' : 'book-open-page-variant'}
@@ -123,8 +113,8 @@ const TeacherClassroomScreen = () => {
                                                     />
                                                 </View>
                                                 <View style={styles.cardInfo}>
-                                                    <Text style={styles.cardTitle}>{item.title}</Text>
-                                                    <Text style={styles.cardSubtitle}>
+                                                    <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#333' }]}>{item.title}</Text>
+                                                    <Text style={[styles.cardSubtitle, { color: isDark ? '#aaa' : '#666' }]}>
                                                         {item.subject} • Class {item.classNumber}
                                                     </Text>
                                                 </View>
@@ -132,8 +122,8 @@ const TeacherClassroomScreen = () => {
 
                                             <View style={styles.metadata}>
                                                 <View style={styles.metaItem}>
-                                                    <MaterialCommunityIcons name="calendar" size={14} color="#999" />
-                                                    <Text style={styles.metaText}>
+                                                    <MaterialCommunityIcons name="calendar" size={14} color={isDark ? '#aaa' : '#999'} />
+                                                    <Text style={[styles.metaText, { color: isDark ? '#aaa' : '#999' }]}>
                                                         {new Date(item.createdAt).toLocaleDateString()}
                                                     </Text>
                                                 </View>
@@ -218,8 +208,8 @@ const TeacherClassroomScreen = () => {
                             >
                                 <MaterialCommunityIcons name="notebook-check-outline" size={64} color="#6200EA" />
                             </LinearGradient>
-                            <Text style={styles.emptyTitle}>No content yet!</Text>
-                            <Text style={styles.emptyText}>
+                            <Text style={[styles.emptyTitle, { color: isDark ? '#fff' : '#333' }]}>No content yet!</Text>
+                            <Text style={[styles.emptyText, { color: isDark ? '#ccc' : '#666' }]}>
                                 Create engaging quizzes and chapters for your students to learn from.
                             </Text>
 
@@ -255,29 +245,101 @@ const TeacherClassroomScreen = () => {
                     )}
                 </ScrollView>
             )}
-        </View>
+
+            {/* Create Content Modal */}
+            <Modal
+                visible={showCreateModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowCreateModal(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowCreateModal(false)}
+                >
+                    <Pressable
+                        style={[styles.modalContent, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}
+                        onPress={e => e.stopPropagation()}
+                    >
+                        <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#1E293B' }]}>
+                            Create Content
+                        </Text>
+                        <Text style={[styles.modalSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                            What would you like to create today?
+                        </Text>
+
+                        <View style={styles.modalOptions}>
+                            <TouchableOpacity
+                                style={[styles.modalOption, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}
+                                onPress={() => {
+                                    setShowCreateModal(false);
+                                    (navigation as any).navigate('TeacherQuizCreator');
+                                }}
+                            >
+                                <View style={[styles.optionIcon, { backgroundColor: '#EC489915' }]}>
+                                    <MaterialCommunityIcons name="clipboard-text" size={24} color="#EC4899" />
+                                </View>
+                                <View style={styles.optionText}>
+                                    <Text style={[styles.optionTitle, { color: isDark ? '#fff' : '#1E293B' }]}>New Quiz</Text>
+                                    <Text style={[styles.optionDesc, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                                        Create an interactive quiz
+                                    </Text>
+                                </View>
+                                <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#94A3B8' : '#CBD5E1'} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.modalOption, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}
+                                onPress={() => {
+                                    setShowCreateModal(false);
+                                    (navigation as any).navigate('TeacherContentManager');
+                                }}
+                            >
+                                <View style={[styles.optionIcon, { backgroundColor: '#05966915' }]}>
+                                    <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#059669" />
+                                </View>
+                                <View style={styles.optionText}>
+                                    <Text style={[styles.optionTitle, { color: isDark ? '#fff' : '#1E293B' }]}>New Chapter</Text>
+                                    <Text style={[styles.optionDesc, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                                        Add reading material or notes
+                                    </Text>
+                                </View>
+                                <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#94A3B8' : '#CBD5E1'} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setShowCreateModal(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F7',
     },
     header: {
-        paddingTop: 50,
-        paddingBottom: 20,
+        paddingBottom: 24,
         paddingHorizontal: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
         elevation: 8,
-        shadowColor: '#6200EA',
+        shadowColor: '#4F46E5',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     backButton: {
         padding: 8,
@@ -289,12 +351,12 @@ const styles = StyleSheet.create({
         marginLeft: 16,
     },
     headerTitle: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
         color: '#fff',
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 13,
         color: 'rgba(255, 255, 255, 0.8)',
         marginTop: 2,
     },
@@ -312,12 +374,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     scrollContent: {
-        padding: 16,
+        padding: 20,
+        paddingTop: 10,
     },
     statsRow: {
         flexDirection: 'row',
         gap: 12,
-        marginBottom: 16,
+        marginBottom: 20,
     },
     statCard: {
         flex: 1,
@@ -330,19 +393,16 @@ const styles = StyleSheet.create({
     statValue: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#333',
         marginTop: 8,
     },
     statLabel: {
         fontSize: 12,
-        color: '#666',
         marginTop: 4,
     },
     contentList: {
-        gap: 12,
+        gap: 16,
     },
     contentCard: {
-        backgroundColor: '#fff',
         borderRadius: 16,
         overflow: 'hidden',
         elevation: 2,
@@ -376,18 +436,16 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#333',
         marginBottom: 4,
     },
     cardSubtitle: {
         fontSize: 12,
-        color: '#666',
     },
     metadata: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 16,
     },
     metaItem: {
         flexDirection: 'row',
@@ -396,7 +454,6 @@ const styles = StyleSheet.create({
     },
     metaText: {
         fontSize: 12,
-        color: '#999',
     },
     typeBadge: {
         paddingHorizontal: 12,
@@ -421,7 +478,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     previewButton: {
-        backgroundColor: '#6200EA',
+        backgroundColor: '#4F46E5',
         flex: 1,
     },
     editButton: {
@@ -453,12 +510,10 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#333',
         marginBottom: 12,
     },
     emptyText: {
         fontSize: 14,
-        color: '#666',
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 32,
@@ -485,6 +540,75 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        maxWidth: 400,
+        borderRadius: 24,
+        padding: 24,
+        elevation: 5,
+        shadowColor: 'black',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalSubtitle: {
+        fontSize: 14,
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    modalOptions: {
+        gap: 12,
+        marginBottom: 24,
+    },
+    modalOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    optionIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    optionText: {
+        flex: 1,
+    },
+    optionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    optionDesc: {
+        fontSize: 12,
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#64748B',
     },
 });
 

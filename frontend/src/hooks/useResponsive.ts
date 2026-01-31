@@ -11,7 +11,7 @@ export const useResponsive = () => {
 
     // Dynamic values
     const numColumns = isDesktop ? 4 : isTablet ? 3 : 2;
-    const maxContentWidth = 1200;
+    const maxContentWidth = 900;
     const formMaxWidth = isMobile ? width * 0.9 : 400;
 
     // Container styles for centering content

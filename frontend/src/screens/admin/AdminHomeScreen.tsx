@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl, StatusBar } from 'react-native';
-import { Text, Surface } from 'react-native-paper';
+import { Text, Surface, Portal, Dialog, Button } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { useAppTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useWindowDimensions } from 'react-native';
 import { spacing } from '../../theme';
+import CompactHeader from '../../components/ui/CompactHeader';
 // const { width: SCREEN_WIDTH } = Dimensions.get('window'); // Removed in favor of hook
 
 const AdminHomeScreen = () => {
@@ -23,6 +24,9 @@ const AdminHomeScreen = () => {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+    const styles = getStyles(isDark);
 
     const fetchStats = async () => {
         try {
@@ -47,6 +51,11 @@ const AdminHomeScreen = () => {
     const onRefresh = () => {
         setRefreshing(true);
         fetchStats();
+    };
+
+    const handleLogout = () => {
+        setShowLogoutDialog(false);
+        logout();
     };
 
     // Bento Grid Items Configuration
@@ -142,27 +151,14 @@ const AdminHomeScreen = () => {
                 contentContainerStyle={getStyles(isDark).scrollContent}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#fff' : '#4F46E5'} />}
             >
-                {/* 🌟 PREMIUM HEADER */}
-                <LinearGradient
-                    colors={isDark ? ['#0A1628', '#1E293B'] : ['#4F46E5', '#6366F1', '#818CF8']}
-                    style={getStyles(isDark).headerBackground}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                >
-                    <View style={[getStyles(isDark).headerContent, { paddingTop: insets.top + spacing.lg }]}>
-                        <View style={getStyles(isDark).profileSection}>
-                            <View style={getStyles(isDark).avatarPlaceholder}>
-                                <Text style={getStyles(isDark).avatarText}>A</Text>
-                            </View>
-                            <Animated.View entering={FadeInRight.delay(200)}>
-                                <Text style={getStyles(isDark).greeting}>Admin Portal</Text>
-                                <Text style={getStyles(isDark).userName}>{user?.name?.split(' ')[0] || 'Administrator'}</Text>
-                            </Animated.View>
-                        </View>
-
-                        <View style={getStyles(isDark).headerActions}>
+                {/* Compact Header */}
+                <CompactHeader
+                    showProfile={true}
+                    subtitle="Admin Portal"
+                    rightComponent={
+                        <>
                             <TouchableOpacity
-                                style={getStyles(isDark).iconBtn}
+                                style={styles.iconBtn}
                                 onPress={toggleTheme}
                             >
                                 <MaterialCommunityIcons
@@ -171,88 +167,169 @@ const AdminHomeScreen = () => {
                                     color={isDark ? '#FCD34D' : '#fff'}
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={logout} style={[getStyles(isDark).iconBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                            <TouchableOpacity onPress={() => setShowLogoutDialog(true)} style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
                                 <Ionicons name="log-out-outline" size={20} color="#fff" />
                             </TouchableOpacity>
+                        </>
+                    }
+                />
+
+                {/* Main Content Area */}
+                <View style={styles.contentContainer}>
+                    {/* Stats Cards Row - Moved out of Header */}
+                    <View style={styles.statsRow}>
+                        <Animated.View entering={FadeInDown.delay(100)} style={styles.statCard}>
+                            <View style={[styles.statIcon, { backgroundColor: 'rgba(79, 70, 229, 0.2)' }]}>
+                                <MaterialCommunityIcons name="office-building" size={20} color={isDark ? '#818CF8' : '#4F46E5'} />
+                            </View>
+                            <Text style={styles.statValue}>{stats?.institutes || 0}</Text>
+                            <Text style={styles.statLabel}>Institutes</Text>
+                        </Animated.View>
+
+                        <Animated.View entering={FadeInDown.delay(200)} style={styles.statCard}>
+                            <View style={[styles.statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
+                                <MaterialCommunityIcons name="human-male-board" size={20} color={isDark ? '#34D399' : '#10B981'} />
+                            </View>
+                            <Text style={styles.statValue}>{stats?.teachers || 0}</Text>
+                            <Text style={styles.statLabel}>Teachers</Text>
+                        </Animated.View>
+
+                        <Animated.View entering={FadeInDown.delay(300)} style={styles.statCard}>
+                            <View style={[styles.statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                                <MaterialCommunityIcons name="school" size={20} color={isDark ? '#FBBF24' : '#F59E0B'} />
+                            </View>
+                            <Text style={styles.statValue}>{stats?.students || 0}</Text>
+                            <Text style={styles.statLabel}>Students</Text>
+                        </Animated.View>
+                    </View>
+
+                    {/* 📦 BENTO GRID */}
+                    <View style={getStyles(isDark).mainContainer}>
+                        <View style={getStyles(isDark).bentoGrid}>
+                            {BENTO_ITEMS.map((item, index) => {
+                                // Responsive Logic
+                                const isMobile = SCREEN_WIDTH < 768; // Tablet breakpoint
+                                let itemWidth: any = '23%'; // Default desktop small
+
+                                if (isMobile) {
+                                    // Mobile: Max 2 columns
+                                    if (item.colSpan >= 6) itemWidth = '48%'; // Keep side-by-side on mobile for main items too
+                                    else itemWidth = '48%';
+
+                                    // Override: if specifically 12, then 100% (none currently 12)
+                                } else {
+                                    // Desktop Logic
+                                    if (item.colSpan === 6) itemWidth = '48%';
+                                    else itemWidth = '23%'; // Force 4 items per row (Reports, Settings, Logs, Support)
+                                }
+
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        style={[getStyles(isDark).bentoItem, { flexBasis: itemWidth }]}
+                                        onPress={() => (navigation as any).navigate(item.screen)}
+                                    >
+                                        <Surface style={getStyles(isDark).bentoSurface} elevation={2}>
+                                            <LinearGradient
+                                                colors={item.gradient as any}
+                                                style={getStyles(isDark).bentoGradient}
+                                                start={{ x: 0, y: 0 }}
+                                                end={{ x: 1, y: 1 }}
+                                            >
+                                                <MaterialCommunityIcons name={item.icon as any} size={isMobile ? 28 : (item.colSpan > 3 ? 32 : 24)} color="#fff" />
+                                                <View>
+                                                    <Text style={[getStyles(isDark).bentoTitle, { fontSize: isMobile ? 14 : (item.colSpan > 3 ? 16 : 12) }]}>{item.label}</Text>
+                                                    {item.colSpan > 3 && <Text style={getStyles(isDark).bentoSubtitle} numberOfLines={1}>{item.subtitle}</Text>}
+                                                </View>
+                                            </LinearGradient>
+                                        </Surface>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                     </View>
 
-                    {/* Stats Cards Row */}
-                    <View style={getStyles(isDark).statsRow}>
-                        <Animated.View entering={FadeInDown.delay(100)} style={getStyles(isDark).statCard}>
-                            <View style={[getStyles(isDark).statIcon, { backgroundColor: 'rgba(79, 70, 229, 0.2)' }]}>
-                                <MaterialCommunityIcons name="office-building" size={20} color="#6366F1" />
-                            </View>
-                            <Text style={getStyles(isDark).statValue}>{stats?.institutes || 0}</Text>
-                            <Text style={getStyles(isDark).statLabel}>Institutes</Text>
-                        </Animated.View>
-
-                        <Animated.View entering={FadeInDown.delay(200)} style={getStyles(isDark).statCard}>
-                            <View style={[getStyles(isDark).statIcon, { backgroundColor: 'rgba(16, 185, 129, 0.2)' }]}>
-                                <MaterialCommunityIcons name="human-male-board" size={20} color="#10B981" />
-                            </View>
-                            <Text style={getStyles(isDark).statValue}>{stats?.teachers || 0}</Text>
-                            <Text style={getStyles(isDark).statLabel}>Teachers</Text>
-                        </Animated.View>
-
-                        <Animated.View entering={FadeInDown.delay(300)} style={getStyles(isDark).statCard}>
-                            <View style={[getStyles(isDark).statIcon, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
-                                <MaterialCommunityIcons name="school" size={20} color="#F59E0B" />
-                            </View>
-                            <Text style={getStyles(isDark).statValue}>{stats?.students || 0}</Text>
-                            <Text style={getStyles(isDark).statLabel}>Students</Text>
-                        </Animated.View>
-                    </View>
-                </LinearGradient>
-
-                {/* 📦 BENTO GRID */}
-                <View style={getStyles(isDark).mainContainer}>
-                    <View style={getStyles(isDark).bentoGrid}>
-                        {BENTO_ITEMS.map((item, index) => {
-                            // Responsive Logic
-                            const isMobile = SCREEN_WIDTH < 768; // Tablet breakpoint
-                            let itemWidth: any = '23%'; // Default desktop small
-
-                            if (isMobile) {
-                                // Mobile: Max 2 columns
-                                if (item.colSpan >= 6) itemWidth = '48%'; // Keep side-by-side on mobile for main items too
-                                else itemWidth = '48%';
-
-                                // Override: if specifically 12, then 100% (none currently 12)
-                            } else {
-                                // Desktop Logic
-                                if (item.colSpan === 6) itemWidth = '48%';
-                                else itemWidth = '23%'; // Force 4 items per row (Reports, Settings, Logs, Support)
-                            }
-
-                            return (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={[getStyles(isDark).bentoItem, { flexBasis: itemWidth }]}
-                                    onPress={() => (navigation as any).navigate(item.screen)}
-                                >
-                                    <Surface style={getStyles(isDark).bentoSurface} elevation={2}>
-                                        <LinearGradient
-                                            colors={item.gradient as any}
-                                            style={getStyles(isDark).bentoGradient}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                        >
-                                            <MaterialCommunityIcons name={item.icon as any} size={isMobile ? 28 : (item.colSpan > 3 ? 32 : 24)} color="#fff" />
-                                            <View>
-                                                <Text style={[getStyles(isDark).bentoTitle, { fontSize: isMobile ? 14 : (item.colSpan > 3 ? 16 : 12) }]}>{item.label}</Text>
-                                                {item.colSpan > 3 && <Text style={getStyles(isDark).bentoSubtitle} numberOfLines={1}>{item.subtitle}</Text>}
-                                            </View>
-                                        </LinearGradient>
-                                    </Surface>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
                 </View>
 
                 <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* Logout Confirmation Dialog */}
+            <Portal>
+                <Dialog
+                    visible={showLogoutDialog}
+                    onDismiss={() => setShowLogoutDialog(false)}
+                    style={{
+                        backgroundColor: isDark ? '#1E293B' : '#fff',
+                        maxWidth: 400,
+                        width: '90%',
+                        alignSelf: 'center',
+                        borderRadius: 16
+                    }}
+                >
+                    <View style={{
+                        alignItems: 'center',
+                        marginTop: 20,
+                        marginBottom: 16
+                    }}>
+                        <View style={{
+                            width: 64,
+                            height: 64,
+                            borderRadius: 16,
+                            backgroundColor: isDark ? 'rgba(248, 113, 113, 0.15)' : 'rgba(239, 68, 68, 0.1)',
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}>
+                            <MaterialCommunityIcons
+                                name="logout"
+                                size={32}
+                                color={isDark ? '#F87171' : '#EF4444'}
+                            />
+                        </View>
+                    </View>
+                    <Dialog.Title style={{
+                        textAlign: 'center',
+                        color: isDark ? '#F1F5F9' : '#1E293B',
+                        fontSize: 20,
+                        fontWeight: '700'
+                    }}>
+                        Logout Confirmation
+                    </Dialog.Title>
+                    <Dialog.Content>
+                        <Text style={{
+                            textAlign: 'center',
+                            color: isDark ? '#94A3B8' : '#64748B',
+                            fontSize: 16,
+                            lineHeight: 24
+                        }}>
+                            Are you sure you want to logout?
+                        </Text>
+                    </Dialog.Content>
+                    <Dialog.Actions style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+                        <Button
+                            onPress={() => setShowLogoutDialog(false)}
+                            mode="outlined"
+                            textColor={isDark ? '#94A3B8' : '#64748B'}
+                            style={{
+                                borderColor: isDark ? '#475569' : '#CBD5E1',
+                                borderRadius: 12,
+                                marginRight: 8
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onPress={handleLogout}
+                            mode="contained"
+                            buttonColor="#EF4444"
+                            textColor="#fff"
+                            style={{ borderRadius: 12 }}
+                        >
+                            Logout
+                        </Button>
+                    </Dialog.Actions>
+                </Dialog>
+            </Portal>
         </View>
     );
 };
@@ -261,6 +338,7 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
     container: {
         flex: 1,
     },
+
     scrollContent: {
         flexGrow: 1,
     },
@@ -335,7 +413,7 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
     statsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         gap: 12,
     },
     statCard: {
@@ -365,9 +443,18 @@ const getStyles = (isDark: boolean) => StyleSheet.create({
         color: isDark ? '#94A3B8' : '#64748B',
     },
     // Main
+    contentContainer: {
+        width: '100%',
+        maxWidth: 1200,
+        alignSelf: 'center',
+        paddingTop: 20,
+        paddingHorizontal: 16,
+    },
     mainContainer: {
-        marginTop: -30,
         paddingHorizontal: 20,
+        width: '100%',
+        maxWidth: 1200,
+        alignSelf: 'center',
     },
     bentoGrid: {
         flexDirection: 'row',

@@ -5,8 +5,10 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/ThemeContext';
+import ScreenBackground from '../components/ScreenBackground';
 import PendingUserCard from '../components/PendingUserCard';
 import api from '../services/api';
 
@@ -109,24 +111,31 @@ const AdminDashboardScreen = () => {
     const filteredUsers = getFilteredUsers();
 
     return (
-        <View style={styles.container}>
-            {/* Top Navigation Bar */}
-            <View style={styles.topNav}>
-                <View style={styles.navLeft}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-                        <Ionicons name="arrow-back" size={24} color={theme.text} />
+        <ScreenBackground style={styles.container}>
+            {/* Top Navigation Bar with Gradient */}
+            <LinearGradient
+                colors={['#0F172A', '#1E293B', '#334155']}
+                style={[styles.headerBackground, { paddingTop: insets.top + 15 }]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <View style={styles.topNavContent}>
+                    <View style={styles.navLeft}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
+                            <Ionicons name="arrow-back" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.navTitle}>Admin Panel</Text>
+                    </View>
+                    <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
+                        <Text style={styles.logoutText}>Logout</Text>
+                        <Ionicons name="log-out-outline" size={20} color="#EF4444" />
                     </TouchableOpacity>
-                    <Text style={styles.navTitle}>Admin Panel</Text>
                 </View>
-                <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                    <Text style={styles.logoutText}>Logout</Text>
-                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                </TouchableOpacity>
-            </View>
+            </LinearGradient>
 
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { maxWidth: 1200, width: '100%', alignSelf: 'center' }]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
@@ -249,30 +258,25 @@ const AdminDashboardScreen = () => {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
-        </View>
+        </ScreenBackground>
     );
 };
 
 const createStyles = (theme: any, insets: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.background,
     },
-    topNav: {
+    headerBackground: {
+        paddingBottom: 24,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        marginBottom: 8,
+    },
+    topNavContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: insets.top + 15,
-        paddingBottom: 15,
-        backgroundColor: theme.cardUser,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,0,0,0.05)',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
     },
     navLeft: {
         flexDirection: 'row',
@@ -281,11 +285,13 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     },
     iconBtn: {
         padding: 4,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 8,
     },
     navTitle: {
         fontSize: 20,
         fontWeight: '700',
-        color: theme.text,
+        color: '#fff',
         letterSpacing: 0.5,
     },
     logoutBtn: {

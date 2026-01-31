@@ -1,15 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { View, FlatList, StyleSheet, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, FlatList, StyleSheet, Text, TouchableOpacity, ActivityIndicator, Alert, TextInput, useWindowDimensions, Modal, ScrollView, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import api from '../../services/api';
 
 const StudentListScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
+    const { isDark, theme } = useAppTheme();
+    const { isMobile, containerStyle } = useResponsive();
+    const { width } = useWindowDimensions();
+
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Filter States
+    const [showFilterModal, setShowFilterModal] = useState(false);
+    const [selectedClass, setSelectedClass] = useState('All');
+    const [selectedLearnerType, setSelectedLearnerType] = useState('All');
 
     useEffect(() => {
         fetchStudents();
@@ -17,16 +33,14 @@ const StudentListScreen = () => {
 
     const fetchStudents = async () => {
         try {
-            console.log('🔍 Fetching students...');
             const response = await api.get('/teacher/students');
-            console.log('📊 Students response:', response.data);
-            console.log('📊 Count:', response.data.length);
             setStudents(response.data);
         } catch (error) {
             console.error('❌ Fetch error:', error);
             Alert.alert('Error', 'Failed to fetch students');
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     };
 
@@ -52,367 +66,649 @@ const StudentListScreen = () => {
         );
     };
 
-    const filteredStudents = students.filter((student: any) =>
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Derived Data
+    const uniqueClasses = useMemo(() => {
+        const classes = new Set(students.map((s: any) => s.selectedClass).filter(Boolean));
+        return ['All', ...Array.from(classes).sort()];
+    }, [students]);
 
-    const getLearnerGradient = (category: string): [string, string] => {
-        if (category === 'fast') return ['#4F46E5', '#7C3AED'];
-        if (category === 'slow') return ['#F59E0B', '#F97316'];
-        return ['#6B7280', '#9CA3AF'];
+    const filteredStudents = useMemo(() => {
+        return students.filter((student: any) => {
+            const matchesSearch =
+                student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                student.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+            const matchesClass = selectedClass === 'All' || student.selectedClass?.toString() === selectedClass.toString();
+
+            const matchesType = selectedLearnerType === 'All'
+                ? true
+                : selectedLearnerType === 'Average'
+                    ? (!student.learnerCategory || student.learnerCategory === 'neutral' || student.learnerCategory === 'average')
+                    : student.learnerCategory === selectedLearnerType.toLowerCase();
+
+            return matchesSearch && matchesClass && matchesType;
+        });
+    }, [students, searchQuery, selectedClass, selectedLearnerType]);
+
+    const getLearnerColors = (category: string) => {
+        if (category === 'fast') return { bg: '#4F46E5', text: '#fff', label: 'Fast', icon: 'lightning-bolt' as const };
+        if (category === 'slow') return { bg: '#F59E0B', text: '#fff', label: 'Slow', icon: 'turtle' as const };
+        return { bg: '#64748B', text: '#fff', label: 'Normal', icon: 'account' as const };
     };
 
-    const renderItem = ({ item }: { item: any }) => (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <LinearGradient
-                    colors={['#6200EA', '#7C4DFF']}
-                    style={styles.avatar}
-                >
-                    <Text style={styles.avatarText}>{item.name.substring(0, 2).toUpperCase()}</Text>
-                </LinearGradient>
+    const renderItem = ({ item }: { item: any }) => {
+        const learner = getLearnerColors(item.learnerCategory);
+        const randomColorIndex = (item.name.length + (item.email?.length || 0)) % 5;
+        const colors = [
+            ['#4F46E5', '#818CF8'], // Indigo
+            ['#EC4899', '#F472B6'], // Pink
+            ['#10B981', '#34D399'], // Emerald
+            ['#F59E0B', '#FCD34D'], // Amber
+            ['#3B82F6', '#60A5FA'], // Blue
+        ];
+        const avatarGradient = colors[randomColorIndex] as [string, string];
 
-                <View style={styles.cardInfo}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.email}>{item.email}</Text>
-                    <View style={styles.metaRow}>
-                        <MaterialCommunityIcons name="school" size={14} color="#666" />
-                        <Text style={styles.grade}>Class {item.selectedClass}</Text>
-                    </View>
-                </View>
-
-                <View style={styles.badgesColumn}>
-                    <View style={[
-                        styles.statusBadge,
-                        { backgroundColor: item.status === 'active' ? '#D1FAE5' : '#FEE2E2' }
-                    ]}>
-                        <Text style={[
-                            styles.statusText,
-                            { color: item.status === 'active' ? '#059669' : '#DC2626' }
-                        ]}>
-                            {item.status?.toUpperCase() || 'ACTIVE'}
-                        </Text>
-                    </View>
-
-                    {item.learnerCategory && item.learnerCategory !== 'neutral' && (
+        return (
+            <View style={[
+                styles.card,
+                { backgroundColor: isDark ? '#1E293B' : '#fff' },
+                isMobile && styles.cardMobile
+            ]}>
+                <View style={[styles.cardContent, isMobile && { flexDirection: 'column', alignItems: 'flex-start' }]}>
+                    {/* User Info Section */}
+                    <View style={styles.userSection}>
                         <LinearGradient
-                            colors={getLearnerGradient(item.learnerCategory)}
-                            style={styles.learnerBadge}
+                            colors={avatarGradient}
+                            style={styles.avatar}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
                         >
-                            <MaterialCommunityIcons
-                                name={item.learnerCategory === 'fast' ? 'lightning-bolt' : 'turtle'}
-                                size={12}
-                                color="#fff"
-                            />
-                            <Text style={styles.learnerText}>
-                                {item.learnerCategory === 'fast' ? 'Fast' : 'Slow'}
-                            </Text>
+                            <Text style={styles.avatarText}>{item.name.substring(0, 2).toUpperCase()}</Text>
                         </LinearGradient>
-                    )}
+
+                        <View style={styles.userInfo}>
+                            <View style={styles.nameRow}>
+                                <Text style={[styles.name, { color: isDark ? '#fff' : '#1E293B' }]}>
+                                    {item.name}
+                                </Text>
+                            </View>
+                            <Text style={[styles.email, { color: isDark ? '#94A3B8' : '#64748B' }]}>{item.email}</Text>
+                            <View style={styles.metaRow}>
+                                <MaterialCommunityIcons name="school" size={14} color={isDark ? '#64748B' : '#94A3B8'} />
+                                <Text style={[styles.grade, { color: isDark ? '#94A3B8' : '#64748B' }]}>Class {item.selectedClass}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Quick Stats/Badges Section - Desktop: Right aligned, Mobile: Below name */}
+                    <View style={[styles.badgesSection, isMobile && { marginTop: 12, width: '100%', flexDirection: 'row', justifyContent: 'flex-start' }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#D1FAE5' }]}>
+                            <Text style={[styles.statusText, { color: '#059669' }]}>ACTIVE</Text>
+                        </View>
+
+                        {item.learnerCategory && item.learnerCategory !== 'neutral' && (
+                            <View style={[styles.learnerBadge, { backgroundColor: learner.bg }]}>
+                                <MaterialCommunityIcons name={learner.icon} size={12} color="#fff" />
+                                <Text style={styles.learnerText}>{learner.label}</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+
+                {/* Actions Row */}
+                <View style={[styles.actionsRow, isMobile && { marginTop: 16 }]}>
+                    <TouchableOpacity
+                        style={styles.analyticsButton}
+                        onPress={() => (navigation as any).navigate('StudentAnalytics', {
+                            studentId: item._id,
+                            studentName: item.name
+                        })}
+                    >
+                        <MaterialCommunityIcons name="chart-line" size={20} color="#fff" />
+                        <Text style={styles.analyticsButtonText}>Analytics</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.iconButtons}>
+                        <TouchableOpacity
+                            style={styles.iconButton}
+                            onPress={() => (navigation as any).navigate('EditStudent', { student: item })}
+                        >
+                            <LinearGradient
+                                colors={['#3B82F6', '#2563EB']}
+                                style={styles.iconGradient}
+                            >
+                                <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.iconButton}
+                            onPress={() => handleDelete(item._id)}
+                        >
+                            <LinearGradient
+                                colors={['#EF4444', '#DC2626']}
+                                style={styles.iconGradient}
+                            >
+                                <MaterialCommunityIcons name="delete" size={18} color="#fff" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
-
-            <View style={styles.actions}>
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.analyticsButton]}
-                    onPress={() => (navigation as any).navigate('StudentAnalytics', {
-                        studentId: item._id,
-                        studentName: item.name
-                    })}
-                >
-                    <MaterialCommunityIcons name="chart-line" size={18} color="#fff" />
-                    <Text style={styles.actionButtonText}>Analytics</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.editButton]}
-                    onPress={() => (navigation as any).navigate('EditStudent', { student: item })}
-                >
-                    <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => handleDelete(item._id)}
-                >
-                    <MaterialCommunityIcons name="delete" size={18} color="#fff" />
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+        );
+    };
 
     return (
-        <View style={styles.container}>
-            {/* Gradient Header */}
-            <LinearGradient
-                colors={['#6200EA', '#7C4DFF']}
-                style={styles.header}
-            >
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={styles.headerContent}>
-                    <Text style={styles.headerTitle}>My Students</Text>
-                    <Text style={styles.headerSubtitle}>{students.length} student{students.length !== 1 ? 's' : ''}</Text>
-                </View>
-                <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => (navigation as any).navigate('CreateStudent')}
-                >
-                    <MaterialCommunityIcons name="plus" size={24} color="#6200EA" />
-                </TouchableOpacity>
-            </LinearGradient>
+        <ScreenBackground style={styles.container}>
+            <CompactHeader
+                title="My Students"
+                subtitle={`${filteredStudents.length} / ${students.length} students showing`}
+                onBack={() => navigation.goBack()}
+                rightComponent={
+                    <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => (navigation as any).navigate('CreateStudent')}
+                    >
+                        <MaterialCommunityIcons name="plus" size={24} color="#4F46E5" />
+                    </TouchableOpacity>
+                }
+            />
 
-            {/* Search Bar */}
-            <View style={styles.searchContainer}>
-                <View style={styles.searchBar}>
-                    <MaterialCommunityIcons name="magnify" size={20} color="#666" />
+            <View style={[styles.contentContainer, containerStyle]}>
+                {/* Search & Filter Bar */}
+                <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
+                    <TouchableOpacity
+                        style={styles.filterButton}
+                        onPress={() => setShowFilterModal(true)}
+                    >
+                        <MaterialCommunityIcons
+                            name="filter-variant"
+                            size={24}
+                            color={selectedClass !== 'All' || selectedLearnerType !== 'All' ? '#4F46E5' : (isDark ? '#94A3B8' : '#64748B')}
+                        />
+                        {(selectedClass !== 'All' || selectedLearnerType !== 'All') && (
+                            <View style={styles.activeFilterBadge} />
+                        )}
+                    </TouchableOpacity>
+                    <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
+                    <MaterialCommunityIcons name="magnify" size={20} color={isDark ? '#94A3B8' : '#64748B'} />
                     <TextInput
                         placeholder="Search students..."
+                        placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        style={styles.searchInput}
+                        style={[styles.searchInput, { color: isDark ? '#fff' : '#1E293B' }]}
                     />
                 </View>
+
+                {/* Applied Filters Chips */}
+                {(selectedClass !== 'All' || selectedLearnerType !== 'All') && (
+                    <View style={styles.activeFiltersRow}>
+                        {selectedClass !== 'All' && (
+                            <TouchableOpacity onPress={() => setSelectedClass('All')} style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>Class: {selectedClass}</Text>
+                                <MaterialCommunityIcons name="close" size={14} color="#4F46E5" />
+                            </TouchableOpacity>
+                        )}
+                        {selectedLearnerType !== 'All' && (
+                            <TouchableOpacity onPress={() => setSelectedLearnerType('All')} style={styles.filterChip}>
+                                <Text style={styles.filterChipText}>{selectedLearnerType}</Text>
+                                <MaterialCommunityIcons name="close" size={14} color="#4F46E5" />
+                            </TouchableOpacity>
+                        )}
+                        <TouchableOpacity onPress={() => { setSelectedClass('All'); setSelectedLearnerType('All'); }}>
+                            <Text style={styles.clearAllText}>Clear All</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#4F46E5" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={filteredStudents}
+                        renderItem={renderItem}
+                        keyExtractor={(item: any) => item._id}
+                        contentContainerStyle={styles.list}
+                        showsVerticalScrollIndicator={false}
+                        ListEmptyComponent={
+                            <View style={styles.emptyState}>
+                                <LinearGradient
+                                    colors={['rgba(79, 70, 229, 0.1)', 'rgba(124, 58, 237, 0.1)']}
+                                    style={styles.emptyIconContainer}
+                                >
+                                    <MaterialCommunityIcons name="account-group-outline" size={64} color="#4F46E5" />
+                                </LinearGradient>
+                                <Text style={[styles.emptyText, { color: isDark ? '#fff' : '#1E293B' }]}>No students found</Text>
+                                <Text style={[styles.emptySubtext, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+                                    {(searchQuery || selectedClass !== 'All' || selectedLearnerType !== 'All')
+                                        ? 'Try adjusting your filters'
+                                        : 'Add your first student to get started'}
+                                </Text>
+                            </View>
+                        }
+                    />
+                )}
             </View>
 
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#6200EA" />
-                </View>
-            ) : (
-                <FlatList
-                    data={filteredStudents}
-                    renderItem={renderItem}
-                    keyExtractor={(item: any) => item._id}
-                    contentContainerStyle={styles.list}
-                    ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <LinearGradient
-                                colors={['rgba(98, 0, 234, 0.1)', 'rgba(124, 77, 255, 0.1)']}
-                                style={styles.emptyIconContainer}
-                            >
-                                <MaterialCommunityIcons name="account-group-outline" size={64} color="#6200EA" />
-                            </LinearGradient>
-                            <Text style={styles.emptyText}>No students found</Text>
-                            <Text style={styles.emptySubtext}>
-                                {searchQuery ? 'Try adjusting your search' : 'Add your first student to get started'}
-                            </Text>
+            {/* Filter Modal */}
+            <Modal
+                visible={showFilterModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowFilterModal(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowFilterModal(false)}
+                >
+                    <Pressable
+                        style={[styles.modalContent, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}
+                        onPress={e => e.stopPropagation()}
+                    >
+                        <View style={styles.modalHeader}>
+                            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#1E293B' }]}>Filter Students</Text>
+                            <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+                                <MaterialCommunityIcons name="close" size={24} color={isDark ? '#94A3B8' : '#64748B'} />
+                            </TouchableOpacity>
                         </View>
-                    }
-                />
-            )}
-        </View>
+
+                        <Text style={[styles.filterSectionTitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>Class</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+                            {uniqueClasses.map((cls: any) => (
+                                <TouchableOpacity
+                                    key={cls}
+                                    style={[
+                                        styles.chip,
+                                        selectedClass === cls && styles.activeChip,
+                                        { backgroundColor: selectedClass === cls ? '#4F46E5' : (isDark ? '#334155' : '#F1F5F9') }
+                                    ]}
+                                    onPress={() => setSelectedClass(cls)}
+                                >
+                                    <Text style={[
+                                        styles.chipText,
+                                        { color: selectedClass === cls ? '#fff' : (isDark ? '#fff' : '#475569') }
+                                    ]}>
+                                        {cls === 'All' ? 'All Classes' : `Class ${cls}`}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        <Text style={[styles.filterSectionTitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>Learner Type</Text>
+                        <View style={styles.chipsRow}>
+                            {['All', 'Fast', 'Average', 'Slow'].map((type) => (
+                                <TouchableOpacity
+                                    key={type}
+                                    style={[
+                                        styles.chip,
+                                        selectedLearnerType === type && styles.activeChip,
+                                        { backgroundColor: selectedLearnerType === type ? '#4F46E5' : (isDark ? '#334155' : '#F1F5F9') }
+                                    ]}
+                                    onPress={() => setSelectedLearnerType(type)}
+                                >
+                                    <Text style={[
+                                        styles.chipText,
+                                        { color: selectedLearnerType === type ? '#fff' : (isDark ? '#fff' : '#475569') }
+                                    ]}>{type}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={[styles.resetButton, { borderColor: isDark ? '#475569' : '#E2E8F0' }]}
+                                onPress={() => {
+                                    setSelectedClass('All');
+                                    setSelectedLearnerType('All');
+                                }}
+                            >
+                                <Text style={[styles.resetButtonText, { color: isDark ? '#94A3B8' : '#64748B' }]}>Reset</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.applyButton}
+                                onPress={() => setShowFilterModal(false)}
+                            >
+                                <Text style={styles.applyButtonText}>Apply Filters</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F7',
-    },
-    header: {
-        paddingTop: 50,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
-        elevation: 8,
-        shadowColor: '#6200EA',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    backButton: {
-        padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
-    },
-    headerContent: {
-        flex: 1,
-        marginLeft: 16,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 2,
     },
     addButton: {
-        backgroundColor: '#fff',
         width: 40,
         height: 40,
         borderRadius: 20,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    searchContainer: {
-        padding: 16,
+    contentContainer: {
+        flex: 1,
+        width: '100%',
+        alignSelf: 'center',
+        padding: 20,
+        paddingTop: 10,
     },
-    searchBar: {
+    searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 12,
-        elevation: 2,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 16,
+        marginBottom: 12, // Reduced margin since chips might appear below
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
+        elevation: 2,
+    },
+    filterButton: {
+        padding: 4,
+        marginRight: 8,
+        position: 'relative',
+    },
+    activeFilterBadge: {
+        position: 'absolute',
+        top: 4,
+        right: 2,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#EF4444',
+        borderWidth: 1,
+        borderColor: '#fff',
+    },
+    divider: {
+        width: 1,
+        height: 24,
+        marginRight: 12,
     },
     searchInput: {
         flex: 1,
-        marginLeft: 8,
+        marginLeft: 12,
+        fontSize: 15,
+    },
+    activeFiltersRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 20,
+        flexWrap: 'wrap',
+    },
+    filterChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#EEF2FF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: '#C7D2FE',
+    },
+    filterChipText: {
+        fontSize: 12,
+        color: '#4F46E5',
+        fontWeight: '600',
+    },
+    clearAllText: {
+        fontSize: 12,
+        color: '#64748B',
+        textDecorationLine: 'underline',
+        marginLeft: 4,
+    },
+    list: {
+        paddingBottom: 40,
+    },
+    card: {
+        borderRadius: 20,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    cardMobile: {
+        padding: 16,
+    },
+    cardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+    },
+    userSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+        flex: 1,
+    },
+    avatar: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarText: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    userInfo: {
+        flex: 1,
+    },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    name: {
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    email: {
+        fontSize: 13,
+        marginBottom: 6,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    grade: {
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    badgesSection: {
+        alignItems: 'flex-end',
+        gap: 8,
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    learnerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+    },
+    learnerText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: '700',
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    analyticsButton: {
+        flex: 1,
+        backgroundColor: '#10B981',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    analyticsButtonText: {
+        color: '#fff',
         fontSize: 14,
-        color: '#333',
+        fontWeight: '600',
+    },
+    iconButtons: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    iconButton: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    iconGradient: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    list: {
-        padding: 16,
-        paddingTop: 0,
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        marginBottom: 12,
-    },
-    avatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    avatarText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    cardInfo: {
-        flex: 1,
-    },
-    name: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    email: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 4,
-    },
-    metaRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    grade: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: '500',
-    },
-    badgesColumn: {
-        gap: 6,
-    },
-    statusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        alignSelf: 'flex-start',
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    learnerBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    learnerText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    actions: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        gap: 6,
-    },
-    analyticsButton: {
-        backgroundColor: '#10B981',
-        flex: 1,
-    },
-    editButton: {
-        backgroundColor: '#3B82F6',
-    },
-    deleteButton: {
-        backgroundColor: '#EF4444',
-    },
-    actionButtonText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '600',
+        height: 300,
     },
     emptyState: {
         alignItems: 'center',
         paddingVertical: 60,
-        paddingHorizontal: 20,
     },
     emptyIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     emptyText: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#333',
         marginBottom: 8,
     },
     emptySubtext: {
         fontSize: 14,
-        color: '#666',
         textAlign: 'center',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        maxWidth: 400,
+        padding: 24,
+        borderRadius: 24,
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    filterSectionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 12,
+        marginTop: 4,
+    },
+    chipsScroll: {
+        marginBottom: 24,
+        maxHeight: 40,
+    },
+    chipsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 32,
+    },
+    chip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginRight: 8, // for scrollview
+    },
+    activeChip: {
+        backgroundColor: '#4F46E5',
+    },
+    chipText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    resetButton: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    resetButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    applyButton: {
+        flex: 1,
+        backgroundColor: '#4F46E5',
+        paddingVertical: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    applyButtonText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '600',
     },
 });
 

@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
 import { Text, Surface, useTheme, ActivityIndicator, Searchbar } from 'react-native-paper';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
-import { useAppTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 
 interface StudentWellbeing {
     _id: string;
@@ -25,14 +28,15 @@ interface WellbeingStats {
     classAverage: number;
     totalStudents: number;
     activeToday: number;
+    mostActiveTime?: string;
 }
 
 const TeacherWellbeingScreen = () => {
-    const theme = useTheme();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
-    const { isDark } = useAppTheme();
-    const styles = createStyles(isDark);
+    const { isDark, theme } = useAppTheme();
+    const colors = theme.colors;
+    const { isDesktop, maxContentWidth } = useResponsive();
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -41,30 +45,38 @@ const TeacherWellbeingScreen = () => {
     const [sortBy, setSortBy] = useState<'name' | 'today' | 'weekly'>('today');
     const [sortAsc, setSortAsc] = useState(false);
 
+    const styles = createStyles(isDark, isDesktop);
+
     const loadData = useCallback(async () => {
         try {
+            console.log('Fetching wellbeing data...');
             const response = await api.get('/wellbeing/students');
-            setStats(response.data);
+            if (response.data && response.data.students) {
+                setStats(response.data);
+            } else {
+                throw new Error('Invalid data format');
+            }
         } catch (error) {
-            console.error('Failed to load wellbeing data:', error);
-            // Mock data for development
+            console.error('Failed to load wellbeing data, using mock data:', error);
+            // Internal Mock Data Fallback
             setStats({
                 students: [
                     { _id: '1', name: 'Rahul Sharma', avatar: null, todayMinutes: 45, weeklyMinutes: 280, averageDaily: 40, lastActive: new Date().toISOString(), streak: 5 },
                     { _id: '2', name: 'Priya Patel', avatar: null, todayMinutes: 30, weeklyMinutes: 210, averageDaily: 30, lastActive: new Date().toISOString(), streak: 3 },
                     { _id: '3', name: 'Amit Kumar', avatar: null, todayMinutes: 60, weeklyMinutes: 420, averageDaily: 60, lastActive: new Date().toISOString(), streak: 7 },
-                    { _id: '4', name: 'Sneha Gupta', avatar: null, todayMinutes: 15, weeklyMinutes: 105, averageDaily: 15, lastActive: null, streak: 0 },
-                    { _id: '5', name: 'Vikram Singh', avatar: null, todayMinutes: 0, weeklyMinutes: 90, averageDaily: 13, lastActive: null, streak: 0 },
+                    { _id: '4', name: 'Sneha Gupta', avatar: null, todayMinutes: 15, weeklyMinutes: 120, averageDaily: 17, lastActive: new Date().toISOString(), streak: 2 },
                 ],
-                classAverage: 36,
-                totalStudents: 5,
-                activeToday: 3
+                classAverage: 45,
+                totalStudents: 4,
+                activeToday: 3,
+                mostActiveTime: '10:00 AM'
             });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     }, []);
+
 
     useEffect(() => {
         loadData();
@@ -126,224 +138,240 @@ const TeacherWellbeingScreen = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-            </View>
-        );
-    }
-
     return (
-        <View style={styles.container}>
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                }
-            >
-                {/* Header */}
-                <LinearGradient
-                    colors={['#8B5CF6', '#7C3AED', '#6D28D9']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.header, { paddingTop: insets.top + 10 }]}
+        <ScreenBackground>
+            <View style={styles.container}>
+                {/* Compact Header */}
+                <CompactHeader
+                    title="Student Wellbeing"
+                    subtitle="Monitor student screen time"
+                    onBack={() => navigation.goBack()}
+                />
+
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8B5CF6" />
+                    }
                 >
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <View style={styles.headerContent}>
-                        <Text style={styles.headerTitle}>Student Wellbeing</Text>
-                        <Text style={styles.headerSubtitle}>Monitor student screen time</Text>
-                    </View>
-                </LinearGradient>
+                    <View style={[styles.contentContainer, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
 
-                {/* Quick Stats */}
-                <Animated.View entering={FadeInDown.delay(100).duration(600)}>
-                    <View style={styles.statsRow}>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <MaterialCommunityIcons name="account-group" size={28} color="#8B5CF6" />
-                            <Text style={styles.statValue}>{stats?.totalStudents || 0}</Text>
-                            <Text style={styles.statLabel}>Total Students</Text>
-                        </Surface>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <MaterialCommunityIcons name="account-check" size={28} color="#10B981" />
-                            <Text style={styles.statValue}>{stats?.activeToday || 0}</Text>
-                            <Text style={styles.statLabel}>Active Today</Text>
-                        </Surface>
-                        <Surface style={styles.statCard} elevation={2}>
-                            <MaterialCommunityIcons name="clock-outline" size={28} color="#F59E0B" />
-                            <Text style={styles.statValue}>{formatDuration(stats?.classAverage || 0)}</Text>
-                            <Text style={styles.statLabel}>Avg. Daily</Text>
-                        </Surface>
-                    </View>
-                </Animated.View>
+                        {loading ? (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="large" color="#8B5CF6" />
+                            </View>
+                        ) : (
+                            <>
+                                {/* Quick Stats */}
+                                <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.statsRow}>
+                                    <Surface style={styles.statCard} elevation={2}>
+                                        <MaterialCommunityIcons name="account-group" size={28} color="#8B5CF6" />
+                                        <Text style={styles.statValue}>{stats?.totalStudents || 0}</Text>
+                                        <Text style={styles.statLabel}>Total Students</Text>
+                                    </Surface>
+                                    <Surface style={styles.statCard} elevation={2}>
+                                        <MaterialCommunityIcons name="account-check" size={28} color="#10B981" />
+                                        <Text style={styles.statValue}>{stats?.activeToday || 0}</Text>
+                                        <Text style={styles.statLabel}>Active Today</Text>
+                                    </Surface>
+                                    <Surface style={styles.statCard} elevation={2}>
+                                        <MaterialCommunityIcons name="clock-outline" size={28} color="#F59E0B" />
+                                        <Text style={styles.statValue}>{formatDuration(stats?.classAverage || 0)}</Text>
+                                        <Text style={styles.statLabel}>Avg. Daily</Text>
+                                    </Surface>
+                                </Animated.View>
 
-                {/* Search Bar */}
-                <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-                    <Searchbar
-                        placeholder="Search students..."
-                        onChangeText={setSearchQuery}
-                        value={searchQuery}
-                        style={styles.searchBar}
-                        inputStyle={styles.searchInput}
-                    />
-                </Animated.View>
+                                {/* Search Bar */}
+                                <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+                                    <Searchbar
+                                        placeholder="Search students..."
+                                        onChangeText={setSearchQuery}
+                                        value={searchQuery}
+                                        style={styles.searchBar}
+                                        inputStyle={styles.searchInput}
+                                        iconColor={colors.onSurfaceVariant}
+                                        placeholderTextColor={colors.onSurfaceVariant}
+                                    />
+                                </Animated.View>
 
-                {/* Sort Options */}
-                <Animated.View entering={FadeInDown.delay(300).duration(600)}>
-                    <View style={styles.sortRow}>
-                        <Text style={styles.sortLabel}>Sort by:</Text>
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === 'name' && styles.sortButtonActive]}
-                            onPress={() => toggleSort('name')}
-                        >
-                            <Text style={[styles.sortButtonText, sortBy === 'name' && styles.sortButtonTextActive]}>
-                                Name {sortBy === 'name' && (sortAsc ? '↑' : '↓')}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === 'today' && styles.sortButtonActive]}
-                            onPress={() => toggleSort('today')}
-                        >
-                            <Text style={[styles.sortButtonText, sortBy === 'today' && styles.sortButtonTextActive]}>
-                                Today {sortBy === 'today' && (sortAsc ? '↑' : '↓')}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.sortButton, sortBy === 'weekly' && styles.sortButtonActive]}
-                            onPress={() => toggleSort('weekly')}
-                        >
-                            <Text style={[styles.sortButtonText, sortBy === 'weekly' && styles.sortButtonTextActive]}>
-                                Weekly {sortBy === 'weekly' && (sortAsc ? '↑' : '↓')}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                </Animated.View>
-
-                {/* Student List */}
-                <Animated.View entering={FadeInDown.delay(400).duration(600)}>
-                    <Text style={styles.sectionTitle}>Students</Text>
-                    {getSortedStudents().map((student, index) => {
-                        const status = getActivityStatus(student.todayMinutes);
-                        return (
-                            <Surface key={student._id} style={styles.studentCard} elevation={2}>
-                                <View style={styles.studentHeader}>
-                                    <View style={styles.studentInfo}>
-                                        <View style={styles.avatarContainer}>
-                                            {student.avatar ? (
-                                                <View style={styles.avatar}>
-                                                    <Text style={styles.avatarText}>
-                                                        {student.name.charAt(0).toUpperCase()}
-                                                    </Text>
-                                                </View>
-                                            ) : (
-                                                <LinearGradient
-                                                    colors={['#8B5CF6', '#7C3AED']}
-                                                    style={styles.avatar}
-                                                >
-                                                    <Text style={styles.avatarText}>
-                                                        {student.name.charAt(0).toUpperCase()}
-                                                    </Text>
-                                                </LinearGradient>
-                                            )}
-                                            {student.streak > 0 && (
-                                                <View style={styles.streakBadge}>
-                                                    <Text style={styles.streakText}>🔥{student.streak}</Text>
-                                                </View>
-                                            )}
-                                        </View>
-                                        <View style={styles.nameContainer}>
-                                            <Text style={styles.studentName}>{student.name}</Text>
-                                            <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
-                                                <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-                                                <Text style={[styles.statusText, { color: status.color }]}>
-                                                    {status.label}
+                                {/* Sort Options */}
+                                <Animated.View entering={FadeInDown.delay(300).duration(600)}>
+                                    <View style={styles.sortRow}>
+                                        <Text style={styles.sortLabel}>Sort by:</Text>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                            <TouchableOpacity
+                                                style={[styles.sortButton, sortBy === 'name' && styles.sortButtonActive]}
+                                                onPress={() => toggleSort('name')}
+                                            >
+                                                <Text style={[styles.sortButtonText, sortBy === 'name' && styles.sortButtonTextActive]}>
+                                                    Name {sortBy === 'name' && (sortAsc ? '↑' : '↓')}
                                                 </Text>
-                                            </View>
-                                        </View>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.sortButton, sortBy === 'today' && styles.sortButtonActive]}
+                                                onPress={() => toggleSort('today')}
+                                            >
+                                                <Text style={[styles.sortButtonText, sortBy === 'today' && styles.sortButtonTextActive]}>
+                                                    Today {sortBy === 'today' && (sortAsc ? '↑' : '↓')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={[styles.sortButton, sortBy === 'weekly' && styles.sortButtonActive]}
+                                                onPress={() => toggleSort('weekly')}
+                                            >
+                                                <Text style={[styles.sortButtonText, sortBy === 'weekly' && styles.sortButtonTextActive]}>
+                                                    Weekly {sortBy === 'weekly' && (sortAsc ? '↑' : '↓')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </ScrollView>
                                     </View>
-                                </View>
-                                <View style={styles.studentStats}>
-                                    <View style={styles.studentStatItem}>
-                                        <Text style={styles.studentStatLabel}>Today</Text>
-                                        <Text style={styles.studentStatValue}>
-                                            {formatDuration(student.todayMinutes)}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.divider} />
-                                    <View style={styles.studentStatItem}>
-                                        <Text style={styles.studentStatLabel}>This Week</Text>
-                                        <Text style={styles.studentStatValue}>
-                                            {formatDuration(student.weeklyMinutes)}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.divider} />
-                                    <View style={styles.studentStatItem}>
-                                        <Text style={styles.studentStatLabel}>Avg/Day</Text>
-                                        <Text style={styles.studentStatValue}>
-                                            {formatDuration(student.averageDaily)}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </Surface>
-                        );
-                    })}
-                </Animated.View>
+                                </Animated.View>
 
-                <View style={{ height: 100 }} />
-            </ScrollView>
-        </View>
+                                {/* Student List */}
+                                <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.studentList}>
+                                    <Text style={styles.sectionTitle}>Students</Text>
+                                    {getSortedStudents().length > 0 ? (
+                                        getSortedStudents().map((student, index) => {
+                                            const status = getActivityStatus(student.todayMinutes);
+                                            return (
+                                                <Surface key={student._id} style={styles.studentCard} elevation={2}>
+                                                    <View style={styles.studentHeader}>
+                                                        <View style={styles.studentInfo}>
+                                                            <View style={styles.avatarContainer}>
+                                                                {student.avatar ? (
+                                                                    <View style={styles.avatar}>
+                                                                        <Text style={styles.avatarText}>
+                                                                            {student.name.charAt(0).toUpperCase()}
+                                                                        </Text>
+                                                                    </View>
+                                                                ) : (
+                                                                    <LinearGradient
+                                                                        colors={['#8B5CF6', '#7C3AED']}
+                                                                        style={styles.avatar}
+                                                                    >
+                                                                        <Text style={styles.avatarText}>
+                                                                            {student.name.charAt(0).toUpperCase()}
+                                                                        </Text>
+                                                                    </LinearGradient>
+                                                                )}
+                                                                {student.streak > 0 && (
+                                                                    <View style={styles.streakBadge}>
+                                                                        <Text style={styles.streakText}>🔥{student.streak}</Text>
+                                                                    </View>
+                                                                )}
+                                                            </View>
+                                                            <View style={styles.nameContainer}>
+                                                                <Text style={styles.studentName}>{student.name}</Text>
+                                                                <View style={[styles.statusBadge, { backgroundColor: status.color + '20' }]}>
+                                                                    <View style={[styles.statusDot, { backgroundColor: status.color }]} />
+                                                                    <Text style={[styles.statusText, { color: status.color }]}>
+                                                                        {status.label}
+                                                                    </Text>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                    <View style={styles.studentStats}>
+                                                        <View style={styles.studentStatItem}>
+                                                            <Text style={styles.studentStatLabel}>Today</Text>
+                                                            <Text style={styles.studentStatValue}>
+                                                                {formatDuration(student.todayMinutes)}
+                                                            </Text>
+                                                        </View>
+                                                        <View style={styles.divider} />
+                                                        <View style={styles.studentStatItem}>
+                                                            <Text style={styles.studentStatLabel}>This Week</Text>
+                                                            <Text style={styles.studentStatValue}>
+                                                                {formatDuration(student.weeklyMinutes)}
+                                                            </Text>
+                                                        </View>
+                                                        <View style={styles.divider} />
+                                                        <View style={styles.studentStatItem}>
+                                                            <Text style={styles.studentStatLabel}>Avg/Day</Text>
+                                                            <Text style={styles.studentStatValue}>
+                                                                {formatDuration(student.averageDaily)}
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                </Surface>
+                                            );
+                                        })
+                                    ) : (
+                                        <View style={styles.emptyState}>
+                                            <MaterialCommunityIcons name="account-search-outline" size={64} color={isDark ? "#475569" : "#CBD5E1"} />
+                                            <Text style={styles.emptyText}>No students found</Text>
+                                        </View>
+                                    )}
+                                </Animated.View>
+                            </>
+                        )}
+                        <View style={{ height: 100 }} />
+                    </View>
+                </ScrollView>
+            </View>
+        </ScreenBackground>
     );
 };
 
-const createStyles = (isDark: boolean) => StyleSheet.create({
+const createStyles = (isDark: boolean, isDesktop: boolean) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: isDark ? '#0F172A' : '#F5F5F5',
     },
-    centered: {
+    loadingContainer: {
+        height: 300,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingBottom: 20,
-    },
     header: {
-        paddingHorizontal: 20,
         paddingBottom: 24,
+        paddingHorizontal: 20,
         borderBottomLeftRadius: 32,
         borderBottomRightRadius: 32,
+        elevation: 8,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        zIndex: 10,
+    },
+    headerContentWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     backButton: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: 12,
         backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
+        marginRight: 16,
     },
     headerContent: {
-        paddingVertical: 10,
+        flex: 1,
     },
     headerTitle: {
         fontSize: 28,
         fontWeight: '800',
         color: '#fff',
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
-        marginTop: 5,
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.9)',
+        marginTop: 4,
+        fontWeight: '500',
+    },
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+    },
+    contentContainer: {
+        paddingTop: 8,
     },
     statsRow: {
         flexDirection: 'row',
@@ -354,27 +382,29 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     statCard: {
         flex: 1,
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 20,
         alignItems: 'center',
         backgroundColor: isDark ? '#1E293B' : '#fff',
     },
     statValue: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: '800',
         color: isDark ? '#F1F5F9' : '#1A1A1A',
         marginTop: 8,
     },
     statLabel: {
         fontSize: 11,
-        color: isDark ? '#94A3B8' : '#666',
+        color: isDark ? '#94A3B8' : '#64748B',
         marginTop: 4,
         textAlign: 'center',
+        fontWeight: '600',
     },
     searchBar: {
         marginHorizontal: 16,
         marginTop: 20,
-        borderRadius: 12,
+        borderRadius: 16,
         backgroundColor: isDark ? '#1E293B' : '#fff',
+        elevation: 2,
     },
     searchInput: {
         color: isDark ? '#F1F5F9' : '#1A1A1A',
@@ -384,42 +414,50 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
         alignItems: 'center',
         marginHorizontal: 16,
         marginTop: 16,
-        gap: 8,
+        gap: 12,
     },
     sortLabel: {
         fontSize: 14,
-        color: isDark ? '#94A3B8' : '#666',
+        color: isDark ? '#94A3B8' : '#64748B',
+        fontWeight: '600',
     },
     sortButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
         borderRadius: 20,
         backgroundColor: isDark ? '#1E293B' : '#fff',
+        marginRight: 8,
+        borderWidth: 1,
+        borderColor: isDark ? '#334155' : '#E2E8F0',
     },
     sortButtonActive: {
         backgroundColor: '#8B5CF6',
+        borderColor: '#8B5CF6',
     },
     sortButtonText: {
         fontSize: 13,
-        color: isDark ? '#94A3B8' : '#666',
+        color: isDark ? '#94A3B8' : '#64748B',
+        fontWeight: '500',
     },
     sortButtonTextActive: {
         color: '#fff',
-        fontWeight: '600',
+        fontWeight: '700',
+    },
+    studentList: {
+        marginTop: 24,
     },
     sectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '700',
         color: isDark ? '#F1F5F9' : '#1A1A1A',
         marginHorizontal: 16,
-        marginTop: 24,
-        marginBottom: 12,
+        marginBottom: 16,
     },
     studentCard: {
         marginHorizontal: 16,
-        marginBottom: 12,
-        borderRadius: 16,
-        padding: 16,
+        marginBottom: 16,
+        borderRadius: 24,
+        padding: 20,
         backgroundColor: isDark ? '#1E293B' : '#fff',
     },
     studentHeader: {
@@ -430,87 +468,101 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     studentInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: 16,
+        flex: 1,
     },
     avatarContainer: {
         position: 'relative',
     },
     avatar: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
     },
     avatarText: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: '700',
         color: '#fff',
     },
     streakBadge: {
         position: 'absolute',
-        bottom: -4,
-        right: -4,
+        bottom: -6,
+        right: -6,
         backgroundColor: '#fff',
-        borderRadius: 10,
-        paddingHorizontal: 4,
+        borderRadius: 12,
+        paddingHorizontal: 6,
         paddingVertical: 2,
+        elevation: 2,
     },
     streakText: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: '700',
     },
     nameContainer: {
-        gap: 4,
+        gap: 6,
+        flex: 1,
     },
     studentName: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '700',
         color: isDark ? '#F1F5F9' : '#1A1A1A',
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 10,
-        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        gap: 6,
         alignSelf: 'flex-start',
     },
     statusDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
     },
     statusText: {
-        fontSize: 11,
-        fontWeight: '600',
+        fontSize: 12,
+        fontWeight: '700',
     },
     studentStats: {
         flexDirection: 'row',
-        marginTop: 16,
-        paddingTop: 16,
+        marginTop: 20,
+        paddingTop: 20,
         borderTopWidth: 1,
-        borderTopColor: isDark ? '#334155' : '#F0F0F0',
+        borderTopColor: isDark ? '#334155' : '#F1F5F9',
     },
     studentStatItem: {
         flex: 1,
         alignItems: 'center',
     },
     studentStatLabel: {
-        fontSize: 11,
-        color: isDark ? '#94A3B8' : '#666',
-        marginBottom: 4,
+        fontSize: 12,
+        color: isDark ? '#94A3B8' : '#64748B',
+        marginBottom: 6,
+        fontWeight: '500',
     },
     studentStatValue: {
         fontSize: 16,
-        fontWeight: '700',
+        fontWeight: '800',
         color: isDark ? '#F1F5F9' : '#1A1A1A',
     },
     divider: {
         width: 1,
-        backgroundColor: isDark ? '#334155' : '#F0F0F0',
+        backgroundColor: isDark ? '#334155' : '#F1F5F9',
+        height: '60%',
+        alignSelf: 'center',
     },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        color: isDark ? '#94A3B8' : '#64748B',
+        fontSize: 16,
+    }
 });
 
 export default TeacherWellbeingScreen;

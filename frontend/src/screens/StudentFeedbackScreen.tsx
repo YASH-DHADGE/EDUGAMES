@@ -10,6 +10,7 @@ import api from '../services/api';
 import SuccessModal from '../components/ui/SuccessModal';
 import { formatDistanceToNow } from 'date-fns';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ScreenBackground from '../components/ScreenBackground';
 
 const StudentFeedbackScreen = () => {
     const navigation = useNavigation();
@@ -154,28 +155,7 @@ const StudentFeedbackScreen = () => {
         }
     };
 
-    // Starry background component
-    const renderStars = () => {
-        const stars = [];
-        for (let i = 0; i < 80; i++) {
-            stars.push(
-                <View
-                    key={i}
-                    style={[
-                        styles.star,
-                        {
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            width: Math.random() * 3 + 1,
-                            height: Math.random() * 3 + 1,
-                            opacity: Math.random() * 0.8 + 0.2,
-                        },
-                    ]}
-                />
-            );
-        }
-        return stars;
-    };
+    // Starry background component removed in favor of ScreenBackground
 
     const renderFeedbackItem = ({ item }: any) => (
         <Surface style={[styles.card, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.9)' }]} elevation={2}>
@@ -261,22 +241,7 @@ const StudentFeedbackScreen = () => {
     );
 
     return (
-        <View style={styles.container}>
-            {/* Unified App Background */}
-            <LinearGradient
-                colors={isDark ? ['#0A1628', '#0F172A', '#1E293B'] : ['#F0F9FF', '#E0F2FE', '#BAE6FD']}
-                style={[StyleSheet.absoluteFill, { zIndex: -1 }]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
-
-            {/* Starry Background */}
-            {isDark && (
-                <View style={styles.starsContainer}>
-                    {renderStars()}
-                </View>
-            )}
-
+        <ScreenBackground style={styles.container}>
             <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
 
             <LinearGradient
@@ -295,6 +260,7 @@ const StudentFeedbackScreen = () => {
                     Help us improve your learning experience
                 </Text>
             </LinearGradient>
+
 
             <View style={styles.content}>
                 <Button
@@ -375,26 +341,13 @@ const StudentFeedbackScreen = () => {
                 }}
                 buttonText="Done"
             />
-        </View>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    starsContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 0,
-    },
-    star: {
-        position: 'absolute',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 50,
     },
     header: {
         paddingBottom: 40,

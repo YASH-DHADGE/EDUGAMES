@@ -9,6 +9,7 @@ import api from '../services/api';
 import { searchOffline } from '../utils/offlineSearch';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/ThemeContext';
+import ScreenBackground from '../components/ScreenBackground';
 
 interface Message {
     id: string;
@@ -134,28 +135,7 @@ const ChatbotScreen = () => {
         flatListRef.current?.scrollToEnd({ animated: true });
     }, [messages]);
 
-    // Starry background component
-    const renderStars = () => {
-        const stars = [];
-        for (let i = 0; i < 80; i++) {
-            stars.push(
-                <View
-                    key={i}
-                    style={[
-                        styles.star,
-                        {
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
-                            width: Math.random() * 3 + 1,
-                            height: Math.random() * 3 + 1,
-                            opacity: Math.random() * 0.8 + 0.2,
-                        },
-                    ]}
-                />
-            );
-        }
-        return stars;
-    };
+    // Starry background component removed in favor of ScreenBackground
 
     const renderMessage = ({ item }: { item: Message }) => {
         const isUser = item.sender === 'user';
@@ -185,100 +165,74 @@ const ChatbotScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <ScreenBackground style={styles.container}>
+            <View style={styles.container}>
+                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
 
-            {/* Unified App Background */}
-            <LinearGradient
-                colors={isDark ? ['#0A1628', '#0F172A', '#1E293B'] : ['#F0F9FF', '#E0F2FE', '#BAE6FD']}
-                style={[StyleSheet.absoluteFill, { zIndex: -1 }]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            />
+                {/* Premium Header */}
+                <LinearGradient
+                    colors={['#6366F1', '#8B5CF6', '#A855F7']}
+                    style={[styles.header, { paddingTop: insets.top + 10 }]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <View style={styles.headerContent}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={24} color="#FFF" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>AI Tutor {isOffline ? '(Offline)' : ''}</Text>
+                        <TouchableOpacity style={styles.helpButton}>
+                            <Ionicons name="help-circle-outline" size={24} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
 
-            {/* Starry Background for Dark Mode */}
-            {isDark && (
-                <View style={styles.starsContainer}>
-                    {renderStars()}
-                </View>
-            )}
+                <FlatList
+                    ref={flatListRef}
+                    data={messages}
+                    keyExtractor={item => item.id}
+                    renderItem={renderMessage}
+                    contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]} // Extra padding for input
+                    style={styles.list}
+                    showsVerticalScrollIndicator={false}
+                />
 
-            {/* Premium Header */}
-            <LinearGradient
-                colors={['#6366F1', '#8B5CF6', '#A855F7']}
-                style={[styles.header, { paddingTop: insets.top + 10 }]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <View style={styles.headerContent}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>AI Tutor {isOffline ? '(Offline)' : ''}</Text>
-                    <TouchableOpacity style={styles.helpButton}>
-                        <Ionicons name="help-circle-outline" size={24} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            </LinearGradient>
-
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                keyExtractor={item => item.id}
-                renderItem={renderMessage}
-                contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]} // Extra padding for input
-                style={styles.list}
-                showsVerticalScrollIndicator={false}
-            />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-                style={styles.keyboardView}
-            >
-                <View style={[styles.inputContainer, isDark && styles.inputContainerDark, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-                    <TextInput
-                        style={[styles.input, isDark && styles.inputDark]}
-                        placeholder="Ask a doubt..."
-                        placeholderTextColor={isDark ? "#94A3B8" : "#666"}
-                        value={query}
-                        onChangeText={setQuery}
-                        onSubmitEditing={handleSend}
-                    />
-                    <TouchableOpacity onPress={handleSend} disabled={loading} style={styles.sendButton}>
-                        {loading ? (
-                            <ActivityIndicator color="#FFF" size="small" />
-                        ) : (
-                            <LinearGradient
-                                colors={['#6366F1', '#A855F7']}
-                                style={styles.sendGradient}
-                            >
-                                <Ionicons name="send" size={20} color="#FFF" />
-                            </LinearGradient>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            </KeyboardAvoidingView>
-        </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+                    style={styles.keyboardView}
+                >
+                    <View style={[styles.inputContainer, isDark && styles.inputContainerDark, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                        <TextInput
+                            style={[styles.input, isDark && styles.inputDark]}
+                            placeholder="Ask a doubt..."
+                            placeholderTextColor={isDark ? "#94A3B8" : "#666"}
+                            value={query}
+                            onChangeText={setQuery}
+                            onSubmitEditing={handleSend}
+                        />
+                        <TouchableOpacity onPress={handleSend} disabled={loading} style={styles.sendButton}>
+                            {loading ? (
+                                <ActivityIndicator color="#FFF" size="small" />
+                            ) : (
+                                <LinearGradient
+                                    colors={['#6366F1', '#A855F7']}
+                                    style={styles.sendGradient}
+                                >
+                                    <Ionicons name="send" size={20} color="#FFF" />
+                                </LinearGradient>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </KeyboardAvoidingView>
+            </View>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    starsContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 0,
-    },
-    star: {
-        position: 'absolute',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 50,
     },
     header: {
         paddingBottom: 25,

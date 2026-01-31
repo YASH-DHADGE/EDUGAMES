@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TextInput, TextInputProps, TouchableOpacity } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
-} from 'react-native-reanimated';
+
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { borderRadius, spacing } from '../../theme';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -34,68 +30,58 @@ const CustomInput: React.FC<CustomInputProps> = ({
     const theme = useTheme();
     const { getResponsiveFontSize, getResponsivePadding } = useResponsive();
     const [isFocused, setIsFocused] = useState(false);
-    const labelPosition = useSharedValue(value ? 1 : 0);
-
-    const handleFocus = (e: any) => {
-        setIsFocused(true);
-        labelPosition.value = withTiming(1, { duration: 200 });
-        onFocus?.(e);
-    };
-
-    const handleBlur = (e: any) => {
-        setIsFocused(false);
-        if (!value) {
-            labelPosition.value = withTiming(0, { duration: 200 });
-        }
-        onBlur?.(e);
-    };
-
-    const labelStyle = useAnimatedStyle(() => ({
-        transform: [
-            {
-                translateY: labelPosition.value === 1 ? -24 : 0,
-            },
-            {
-                scale: labelPosition.value === 1 ? 0.85 : 1,
-            },
-        ],
-    }));
 
     const borderColor = error
         ? theme.colors.error
         : isFocused
             ? theme.colors.primary
-            : theme.colors.outline;
+            : 'transparent';
+
+    const backgroundColor = theme.dark
+        ? 'rgba(255, 255, 255, 0.05)'
+        : theme.colors.surfaceVariant;
 
     // Responsive values
     const inputFontSize = getResponsiveFontSize(16);
-    const minHeight = getResponsivePadding(56);
+    const minHeight = getResponsivePadding(62);
 
     return (
         <View style={styles.container}>
-            <View style={[styles.inputContainer, { borderColor, borderWidth: isFocused ? 2 : 1 }]}>
+            {/* Label is now outside and static */}
+            <Text
+                style={[
+                    styles.label,
+                    {
+                        color: error
+                            ? theme.colors.error
+                            : theme.colors.onSurfaceVariant,
+                    },
+                ]}
+            >
+                {label}
+            </Text>
+
+            <View style={[
+                styles.inputContainer,
+                {
+                    borderColor,
+                    borderWidth: isFocused ? 2 : 1,
+                    backgroundColor: backgroundColor
+                }
+            ]}>
                 {icon && <View style={styles.iconContainer}>{icon}</View>}
+
                 <View style={styles.inputWrapper}>
-                    <Animated.View style={[styles.labelContainer, labelStyle]}>
-                        <Text
-                            style={[
-                                styles.label,
-                                {
-                                    color: error
-                                        ? theme.colors.error
-                                        : isFocused
-                                            ? theme.colors.primary
-                                            : theme.colors.onSurfaceVariant,
-                                },
-                            ]}
-                        >
-                            {label}
-                        </Text>
-                    </Animated.View>
                     <TextInput
                         value={value}
-                        onFocus={handleFocus}
-                        onBlur={handleBlur}
+                        onFocus={(e) => {
+                            setIsFocused(true);
+                            onFocus?.(e);
+                        }}
+                        onBlur={(e) => {
+                            setIsFocused(false);
+                            onBlur?.(e);
+                        }}
                         style={[
                             styles.input,
                             {
@@ -106,10 +92,12 @@ const CustomInput: React.FC<CustomInputProps> = ({
                                 minHeight: minHeight,
                             },
                         ]}
+                        placeholder={isFocused ? props.placeholder : ''}
                         placeholderTextColor={theme.colors.onSurfaceVariant}
                         {...props}
                     />
                 </View>
+
                 {rightIcon && (
                     <TouchableOpacity onPress={onRightIconPress} style={styles.rightIconContainer}>
                         <MaterialCommunityIcons
@@ -138,12 +126,17 @@ const styles = StyleSheet.create({
     container: {
         marginBottom: spacing.lg,
     },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        marginBottom: 8,
+        marginLeft: 4,
+    },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: borderRadius.md,
-        backgroundColor: '#FFFFFF',
-        minHeight: 56,
+        borderRadius: borderRadius.lg, // More rounded modern look
+        overflow: 'hidden',
     },
     iconContainer: {
         paddingLeft: spacing.lg,
@@ -154,25 +147,11 @@ const styles = StyleSheet.create({
     },
     inputWrapper: {
         flex: 1,
-        position: 'relative',
-    },
-    labelContainer: {
-        position: 'absolute',
-        left: spacing.lg,
-        top: 18,
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 4,
-        zIndex: 1,
-    },
-    label: {
-        fontSize: 16,
     },
     input: {
-        fontSize: 16,
+        fontSize: 18.5,
         paddingHorizontal: spacing.lg,
-        paddingTop: 20,
-        paddingBottom: 8,
-        minHeight: 56,
+        paddingVertical: 18,
     },
     helperText: {
         fontSize: 12,

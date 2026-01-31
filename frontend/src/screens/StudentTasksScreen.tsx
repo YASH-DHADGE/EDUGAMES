@@ -3,8 +3,7 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl, A
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import GradientBackground from '../components/ui/GradientBackground';
-import CustomCard from '../components/ui/CustomCard';
+import ScreenBackground from '../components/ScreenBackground';
 import { useAuth } from '../context/AuthContext';
 import { useSync } from '../context/SyncContext';
 import { useAppTheme } from '../context/ThemeContext';
@@ -29,7 +28,6 @@ const StudentTasksScreen = () => {
     const styles = StyleSheet.create({
         container: {
             flex: 1,
-            backgroundColor: isDark ? '#0F172A' : '#EEF2FF',
         },
         scrollContent: {
             paddingTop: spacing.lg,
@@ -76,7 +74,7 @@ const StudentTasksScreen = () => {
         taskCard: {
             marginBottom: spacing.md,
             padding: spacing.lg + 2,
-            backgroundColor: isDark ? '#1E293B' : '#EEF2FF',
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(255, 255, 255, 0.9)',
             borderRadius: 16,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },
@@ -84,7 +82,7 @@ const StudentTasksScreen = () => {
             shadowRadius: 8,
             elevation: 2,
             borderWidth: 1,
-            borderColor: isDark ? '#334155' : '#F0F0F0',
+            borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.5)',
         },
         taskHeader: {
             flexDirection: 'row',
@@ -331,7 +329,7 @@ const StudentTasksScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <ScreenBackground style={styles.container}>
             <UnifiedHeader
                 title={t('tasks.title')}
                 subtitle="Track your assignments"
@@ -369,7 +367,7 @@ const StudentTasksScreen = () => {
                     </ScrollView>
                 )}
             </View>
-        </View>
+        </ScreenBackground>
     );
 };
 

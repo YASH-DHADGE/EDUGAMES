@@ -9,9 +9,14 @@ import api from '../services/api';
 import { spacing, borderRadius, theme } from '../theme';
 import { formatDistanceToNow } from 'date-fns';
 import ScreenBackground from '../components/ScreenBackground';
+import CompactHeader from '../components/ui/CompactHeader';
+import { useAppTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 
 const NotificationScreen = () => {
     const navigation = useNavigation();
+    const { isDark } = useAppTheme();
+    const { isDesktop, maxContentWidth } = useResponsive();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -83,12 +88,9 @@ const NotificationScreen = () => {
                 activeOpacity={0.9}
                 style={styles.cardContainer}
             >
-                <Surface style={[styles.card, !item.isRead && styles.unreadCard]} elevation={2}>
-                    <LinearGradient
-                        colors={item.isRead ? ['#f0f2f5', '#e6e9ef'] : ['#ebf4ff', '#e1effe']}
-                        style={styles.cardGradient}
-                    >
-                        <View style={[styles.iconContainer, { backgroundColor: getColor(item.type) + '15' }]}>
+                <Surface style={[styles.card, !item.isRead && styles.unreadCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]} elevation={2}>
+                    <View style={styles.cardGradient}>
+                        <View style={[styles.iconContainer, { backgroundColor: getColor(item.type) + (isDark ? '30' : '15') }]}>
                             <MaterialCommunityIcons
                                 name={getIcon(item.type) as any}
                                 size={28}
@@ -97,60 +99,67 @@ const NotificationScreen = () => {
                         </View>
                         <View style={styles.content}>
                             <View style={styles.headerRow}>
-                                <Text style={[styles.title, !item.isRead && styles.unreadText]} numberOfLines={1}>
+                                <Text style={[styles.title, { color: isDark ? '#F1F5F9' : '#334155' }, !item.isRead && styles.unreadText]} numberOfLines={1}>
                                     {item.title}
                                 </Text>
                                 {!item.isRead && <View style={styles.dot} />}
                             </View>
-                            <Text style={styles.message} numberOfLines={3}>{item.message}</Text>
+                            <Text style={[styles.message, { color: isDark ? '#94A3B8' : '#64748b' }]} numberOfLines={3}>{item.message}</Text>
                             <View style={styles.footerRow}>
-                                <MaterialCommunityIcons name="clock-outline" size={12} color="#94a3b8" />
-                                <Text style={styles.time}>
+                                <MaterialCommunityIcons name="clock-outline" size={12} color={isDark ? '#64748B' : '#94a3b8'} />
+                                <Text style={[styles.time, { color: isDark ? '#64748B' : '#94a3b8' }]}>
                                     {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                                 </Text>
                             </View>
                         </View>
-                    </LinearGradient>
+                    </View>
                 </Surface>
             </TouchableOpacity>
         </Animated.View>
     );
 
+    const styles = createStyles(isDark, isDesktop);
+
     return (
         <ScreenBackground style={styles.container}>
-
-            <View style={styles.header}>
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                >
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#1e293b" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Notifications</Text>
-                <TouchableOpacity
-                    onPress={markAllAsRead}
-                    disabled={notifications.every(n => n.isRead)}
-                    style={[styles.actionButton, notifications.every(n => n.isRead) && styles.disabledButton]}
-                >
-                    <MaterialCommunityIcons name="check-all" size={24} color={notifications.every(n => n.isRead) ? '#cbd5e1' : '#6366f1'} />
-                </TouchableOpacity>
-            </View>
+            <CompactHeader
+                title="Notifications"
+                subtitle={`${notifications.filter(n => !n.isRead).length} unread`}
+                onBack={() => navigation.goBack()}
+                rightComponent={
+                    <TouchableOpacity
+                        onPress={markAllAsRead}
+                        disabled={notifications.every(n => n.isRead)}
+                        style={[styles.actionButton, notifications.every(n => n.isRead) && styles.disabledButton]}
+                    >
+                        <MaterialCommunityIcons
+                            name="check-all"
+                            size={24}
+                            color={notifications.every(n => n.isRead) ? (isDark ? '#475569' : '#cbd5e1') : '#6366f1'}
+                        />
+                    </TouchableOpacity>
+                }
+            />
 
             {loading ? (
-                <ActivityIndicator style={{ marginTop: 20 }} />
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#4F46E5" />
+                </View>
             ) : (
                 <FlatList
                     data={notifications}
                     renderItem={renderItem}
                     keyExtractor={item => item._id}
-                    contentContainerStyle={styles.listContent}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    contentContainerStyle={[styles.listContent, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}
                     ListEmptyComponent={
-                        // Empty state
                         <View style={styles.emptyState}>
-                            <View style={styles.emptyIconContainer}>
-                                <MaterialCommunityIcons name="bell-off-outline" size={48} color="#94a3b8" />
-                            </View>
+                            <LinearGradient
+                                colors={isDark ? ['rgba(99, 102, 241, 0.1)', 'rgba(124, 58, 237, 0.1)'] : ['rgba(99, 102, 241, 0.1)', 'rgba(124, 58, 237, 0.1)']}
+                                style={styles.emptyIconContainer}
+                            >
+                                <MaterialCommunityIcons name="bell-off-outline" size={64} color={isDark ? '#64748B' : '#94a3b8'} />
+                            </LinearGradient>
                             <Text style={styles.emptyTitle}>All Caught Up!</Text>
                             <Text style={styles.emptyText}>You have no new notifications at the moment.</Text>
                         </View>
@@ -161,36 +170,19 @@ const NotificationScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (isDark: boolean, isDesktop: boolean) => StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: spacing.lg,
-        paddingTop: Platform.OS === 'ios' ? 60 : 50,
-        paddingBottom: spacing.md,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f5f9',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1e293b',
-        textAlign: 'center',
-    },
-    backButton: {
-        padding: 8,
-        borderRadius: 12,
-        backgroundColor: '#f8fafc',
     },
     actionButton: {
         padding: 8,
         borderRadius: 12,
-        backgroundColor: '#f8fafc',
+        backgroundColor: isDark ? '#334155' : '#f8fafc',
     },
     disabledButton: {
         opacity: 0.5,
@@ -204,7 +196,6 @@ const styles = StyleSheet.create({
     },
     card: {
         borderRadius: 20,
-        backgroundColor: '#fff',
         overflow: 'hidden',
     },
     cardGradient: {
@@ -213,8 +204,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     unreadCard: {
-        borderWidth: 1,
-        borderColor: '#e0e7ff',
+        borderWidth: 2,
+        borderColor: isDark ? 'rgba(99, 102, 241, 0.3)' : '#e0e7ff',
     },
     iconContainer: {
         width: 50,
@@ -236,17 +227,14 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#334155',
         flex: 1,
         marginRight: 8,
     },
     unreadText: {
-        color: '#1e293b',
         fontWeight: '800',
     },
     message: {
         fontSize: 14,
-        color: '#64748b',
         lineHeight: 20,
         marginBottom: 8,
     },
@@ -257,7 +245,6 @@ const styles = StyleSheet.create({
     },
     time: {
         fontSize: 12,
-        color: '#94a3b8',
         fontWeight: '500',
     },
     dot: {
@@ -273,23 +260,22 @@ const styles = StyleSheet.create({
         padding: spacing.xl,
     },
     emptyIconContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: '#f1f5f9',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: spacing.lg,
     },
     emptyTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#334155',
-        marginBottom: spacing.xs,
+        fontSize: 24,
+        fontWeight: '800',
+        color: isDark ? '#F1F5F9' : '#334155',
+        marginBottom: spacing.sm,
     },
     emptyText: {
         textAlign: 'center',
-        color: '#94a3b8',
+        color: isDark ? '#94A3B8' : '#64748B',
         fontSize: 16,
         lineHeight: 24,
     },

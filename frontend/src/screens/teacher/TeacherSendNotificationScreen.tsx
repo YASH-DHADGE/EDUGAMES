@@ -1,18 +1,25 @@
-
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native';
-import { Text, TextInput, Surface, ActivityIndicator, HelperText } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { Text, TextInput, Surface, ActivityIndicator, Switch } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import api from '../../services/api';
-import GradientBackground from '../../components/ui/GradientBackground';
-import CustomButton from '../../components/ui/CustomButton';
-import { spacing, borderRadius, theme } from '../../theme';
-import { Ionicons } from '@expo/vector-icons';
 import SuccessModal from '../../components/ui/SuccessModal';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
+import CustomDropdown from '../../components/ui/CustomDropdown';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 
 const TeacherSendNotificationScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
+    const { isDark } = useAppTheme();
+    const { isDesktop, maxContentWidth } = useResponsive();
+
     const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -20,11 +27,16 @@ const TeacherSendNotificationScreen = () => {
 
     // Form state
     const [selectedStudent, setSelectedStudent] = useState('');
-    const [sendToAll, setSendToAll] = useState(false); // New state
+    const [audienceType, setAudienceType] = useState<'individual' | 'all' | 'filtered'>('all');
     const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
     const [notificationType, setNotificationType] = useState('assignment');
 
+    // Filters
+    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+
+    const styles = createStyles(isDark, isDesktop);
     useEffect(() => {
         fetchStudents();
     }, []);
@@ -35,27 +47,42 @@ const TeacherSendNotificationScreen = () => {
             setStudents(response.data);
         } catch (error) {
             console.error('Failed to fetch students:', error);
-            Alert.alert('Error', 'Failed to load students list');
         } finally {
             setLoading(false);
         }
     };
 
     const handleSend = async () => {
-        if ((!selectedStudent && !sendToAll) || !title.trim() || !message.trim()) {
+        if (audienceType === 'individual' && !selectedStudent) {
+            Alert.alert('Error', 'Please select a student');
+            return;
+        }
+        if (!title.trim() || !message.trim()) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         setSending(true);
         try {
-            await api.post('/notifications/send', {
-                recipientId: sendToAll ? 'all' : selectedStudent,
+            let payload: any = {
                 title,
                 message,
                 type: notificationType,
                 data: {}
-            });
+            };
+
+            if (audienceType === 'individual') {
+                payload.recipientId = selectedStudent;
+            } else if (audienceType === 'all') {
+                payload.recipientId = 'all';
+            } else {
+                payload.recipientId = 'filtered';
+                payload.filters = {};
+                if (selectedClass) payload.filters.classLevel = parseInt(selectedClass);
+                if (selectedCategory) payload.filters.learnerCategory = selectedCategory;
+            }
+
+            await api.post('/notifications/send', payload);
 
             setShowSuccessModal(true);
         } catch (error: any) {
@@ -66,198 +93,360 @@ const TeacherSendNotificationScreen = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#fff" />
-            </View>
-        );
-    }
+    const getTypeColor = (type: string) => {
+        switch (type) {
+            case 'assignment': return '#3B82F6';
+            case 'approval': return '#10B981';
+            case 'reminder': return '#F59E0B';
+            case 'system': return '#6366F1';
+            default: return '#64748B';
+        }
+    };
+
+    const getTypeIcon = (type: string) => {
+        switch (type) {
+            case 'assignment': return 'clipboard-text-clock';
+            case 'approval': return 'check-decagram';
+            case 'reminder': return 'clock-alert';
+            case 'system': return 'bell-ring';
+            default: return 'bell';
+        }
+    };
 
     return (
-        <GradientBackground>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
-            >
-                <View style={styles.header}>
-                    <CustomButton
-                        variant="text"
-                        icon="arrow-left"
-                        onPress={() => navigation.goBack()}
-                        style={styles.backButton}
+        <ScreenBackground>
+            <View style={{ flex: 1 }}>
+                <CompactHeader
+                    title="Send Notification"
+                    subtitle="Broadcast updates to your class"
+                    onBack={() => navigation.goBack()}
+                />
+
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    style={{ flex: 1 }}
+                >
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
                     >
-                        {""}
-                    </CustomButton>
-                    <Text style={styles.headerTitle}>Send Notification</Text>
-                </View>
+                        <View style={[styles.contentContainer, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
 
-                <ScrollView contentContainerStyle={styles.content}>
-                    <Surface style={styles.formCard}>
-                        <View style={styles.fieldContainer}>
-                            <View style={styles.switchRow}>
-                                <Text style={styles.label}>Send to All Students</Text>
-                                <Switch
-                                    value={sendToAll}
-                                    onValueChange={setSendToAll}
-                                    trackColor={{ false: '#767577', true: '#81b0ff' }}
-                                    thumbColor={sendToAll ? '#4c669f' : '#f4f3f4'}
-                                />
-                            </View>
+                            {loading ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color="#4F46E5" />
+                                </View>
+                            ) : (
+                                <Animated.View entering={FadeInDown.delay(100).duration(500)}>
 
-                            {!sendToAll && (
-                                <>
-                                    <Text style={styles.label}>Select Student</Text>
-                                    <View style={styles.pickerContainer}>
-                                        <Picker
-                                            selectedValue={selectedStudent}
-                                            onValueChange={(itemValue) => setSelectedStudent(itemValue)}
-                                            style={styles.picker}
-                                        >
-                                            <Picker.Item label="Select a student..." value="" />
-                                            {students.map((student) => (
-                                                <Picker.Item
-                                                    key={student._id}
-                                                    label={student.name}
-                                                    value={student._id}
+                                    {/* Audience Card - High zIndex for Dropdown */}
+                                    <Surface style={[styles.card, { backgroundColor: isDark ? '#1E293B' : '#fff', zIndex: 100 }]}>
+                                        <View style={styles.cardHeader}>
+                                            <MaterialCommunityIcons name="account-group-outline" size={24} color="#4F46E5" />
+                                            <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#1F2937' }]}>AUDIENCE</Text>
+                                        </View>
+
+                                        {/* Audience Type Selection */}
+                                        <View style={styles.audienceTypes}>
+                                            <TouchableOpacity
+                                                onPress={() => setAudienceType('all')}
+                                                style={[styles.typeButton, audienceType === 'all' && styles.typeButtonActive, { borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                                            >
+                                                <Text style={[styles.typeButtonText, audienceType === 'all' && styles.typeButtonTextActive, { color: isDark ? '#fff' : '#1F2937' }]}>All Students</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => setAudienceType('filtered')}
+                                                style={[styles.typeButton, audienceType === 'filtered' && styles.typeButtonActive, { borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                                            >
+                                                <Text style={[styles.typeButtonText, audienceType === 'filtered' && styles.typeButtonTextActive, { color: isDark ? '#fff' : '#1F2937' }]}>Filtered Group</Text>
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                onPress={() => setAudienceType('individual')}
+                                                style={[styles.typeButton, audienceType === 'individual' && styles.typeButtonActive, { borderColor: isDark ? '#334155' : '#E2E8F0' }]}
+                                            >
+                                                <Text style={[styles.typeButtonText, audienceType === 'individual' && styles.typeButtonTextActive, { color: isDark ? '#fff' : '#1F2937' }]}>Specific Student</Text>
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        {audienceType === 'individual' && (
+                                            <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 16 }}>
+                                                <CustomDropdown
+                                                    label="Select Student"
+                                                    data={students.map(student => ({ label: student.name, value: student._id }))}
+                                                    value={selectedStudent}
+                                                    onSelect={setSelectedStudent}
+                                                    placeholder="Choose a student..."
+                                                    icon="account"
                                                 />
+                                            </Animated.View>
+                                        )}
+
+                                        {audienceType === 'filtered' && (
+                                            <Animated.View entering={FadeInDown.duration(300)} style={{ marginTop: 16, gap: 16 }}>
+                                                {/* Higher zIndex for the top dropdown so it opens OVER the bottom one */}
+                                                <View style={{ zIndex: 2000 }}>
+                                                    <CustomDropdown
+                                                        label="Filter by Class"
+                                                        data={[
+                                                            { label: 'Any Class', value: '' },
+                                                            { label: 'Class 6', value: '6' },
+                                                            { label: 'Class 7', value: '7' },
+                                                            { label: 'Class 8', value: '8' },
+                                                            { label: 'Class 9', value: '9' },
+                                                            { label: 'Class 10', value: '10' },
+                                                            { label: 'Class 11', value: '11' },
+                                                            { label: 'Class 12', value: '12' },
+                                                        ]}
+                                                        value={selectedClass}
+                                                        onSelect={setSelectedClass}
+                                                        placeholder="Select Class..."
+                                                        icon="school"
+                                                    />
+                                                </View>
+
+                                                {/* Lower zIndex for the bottom dropdown */}
+                                                <View style={{ zIndex: 1000 }}>
+                                                    <CustomDropdown
+                                                        label="Filter by Performance"
+                                                        data={[
+                                                            { label: 'Any Category', value: '' },
+                                                            { label: 'Slow Learners (Needs Attention)', value: 'slow' },
+                                                            { label: 'Fast Learners (Top Performers)', value: 'fast' },
+                                                            { label: 'Neutral', value: 'neutral' },
+                                                        ]}
+                                                        value={selectedCategory}
+                                                        onSelect={setSelectedCategory}
+                                                        placeholder="Select Performance Category..."
+                                                        icon="chart-timeline-variant"
+                                                    />
+                                                </View>
+                                            </Animated.View>
+                                        )}
+                                    </Surface>
+
+                                    {/* Type Card */}
+                                    <Surface style={[styles.card, { backgroundColor: isDark ? '#1E293B' : '#fff', marginTop: 16 }]}>
+                                        <View style={styles.cardHeader}>
+                                            <MaterialCommunityIcons name="shape-outline" size={24} color="#4F46E5" />
+                                            <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#1F2937' }]}>TYPE</Text>
+                                        </View>
+
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeScroll}>
+                                            {['assignment', 'approval', 'reminder', 'system'].map((type) => (
+                                                <TouchableOpacity
+                                                    key={type}
+                                                    onPress={() => setNotificationType(type)}
+                                                    style={[
+                                                        styles.typeChip,
+                                                        notificationType === type
+                                                            ? { backgroundColor: getTypeColor(type), borderColor: getTypeColor(type) }
+                                                            : { backgroundColor: isDark ? '#0F172A' : '#F1F5F9', borderColor: 'transparent' }
+                                                    ]}
+                                                >
+                                                    <MaterialCommunityIcons
+                                                        name={getTypeIcon(type) as any}
+                                                        size={18}
+                                                        color={notificationType === type ? '#fff' : (isDark ? '#94A3B8' : '#64748B')}
+                                                    />
+                                                    <Text style={[
+                                                        styles.typeText,
+                                                        { color: notificationType === type ? '#fff' : (isDark ? '#94A3B8' : '#64748B') }
+                                                    ]}>
+                                                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                                                    </Text>
+                                                </TouchableOpacity>
                                             ))}
-                                        </Picker>
-                                    </View>
-                                </>
+                                        </ScrollView>
+                                    </Surface>
+
+                                    {/* Content Card */}
+                                    <Surface style={[styles.card, { backgroundColor: isDark ? '#1E293B' : '#fff', marginTop: 16 }]}>
+                                        <View style={styles.cardHeader}>
+                                            <MaterialCommunityIcons name="text-box-outline" size={24} color="#4F46E5" />
+                                            <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#1F2937' }]}>CONTENT</Text>
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#64748B' }]}>TITLE</Text>
+                                            <TextInput
+                                                mode="outlined"
+                                                placeholder="e.g. Homework Deadline"
+                                                value={title}
+                                                onChangeText={setTitle}
+                                                style={styles.input}
+                                                outlineColor={isDark ? '#334155' : '#E2E8F0'}
+                                                activeOutlineColor="#4F46E5"
+                                                textColor={isDark ? '#F1F5F9' : '#1A1A1A'}
+                                                contentStyle={{ backgroundColor: isDark ? '#1E293B' : '#fff' }}
+                                            />
+                                        </View>
+
+                                        <View style={styles.inputGroup}>
+                                            <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#64748B' }]}>MESSAGE</Text>
+                                            <TextInput
+                                                mode="outlined"
+                                                placeholder="Write your message here..."
+                                                value={message}
+                                                onChangeText={setMessage}
+                                                multiline
+                                                numberOfLines={6}
+                                                style={[styles.input, styles.textArea]}
+                                                outlineColor={isDark ? '#334155' : '#E2E8F0'}
+                                                activeOutlineColor="#4F46E5"
+                                                textColor={isDark ? '#F1F5F9' : '#1A1A1A'}
+                                                contentStyle={{ backgroundColor: isDark ? '#1E293B' : '#fff' }}
+                                            />
+                                        </View>
+                                    </Surface>
+
+                                    {/* Send Button */}
+                                    <TouchableOpacity
+                                        onPress={handleSend}
+                                        disabled={sending}
+                                        style={[styles.sendButton, { opacity: sending ? 0.7 : 1 }]}
+                                    >
+                                        {sending ? (
+                                            <ActivityIndicator color="#fff" size="small" />
+                                        ) : (
+                                            <>
+                                                <MaterialCommunityIcons name="send" size={20} color="#fff" />
+                                                <Text style={styles.sendButtonText}>Send Notification</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+
+                                </Animated.View>
                             )}
+                            <View style={{ height: 40 }} />
                         </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
 
-                        <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Notification Type</Text>
-                            <View style={styles.pickerContainer}>
-                                <Picker
-                                    selectedValue={notificationType}
-                                    onValueChange={(itemValue) => setNotificationType(itemValue)}
-                                    style={styles.picker}
-                                >
-                                    <Picker.Item label="Assignment" value="assignment" />
-                                    <Picker.Item label="Approval" value="approval" />
-                                    <Picker.Item label="Reminder" value="reminder" />
-                                    <Picker.Item label="General" value="system" />
-                                </Picker>
-                            </View>
-                        </View>
-
-                        <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Title</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={title}
-                                onChangeText={setTitle}
-                                placeholder="Enter notification title"
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <View style={styles.fieldContainer}>
-                            <Text style={styles.label}>Message</Text>
-                            <TextInput
-                                mode="outlined"
-                                value={message}
-                                onChangeText={setMessage}
-                                placeholder="Enter your message"
-                                multiline
-                                numberOfLines={4}
-                                style={styles.input}
-                            />
-                        </View>
-
-                        <CustomButton
-                            variant="primary"
-                            onPress={handleSend}
-                            loading={sending}
-                            style={styles.sendButton}
-                            icon="send"
-                        >
-                            Send Notification
-                        </CustomButton>
-                    </Surface>
-                </ScrollView>
-            </KeyboardAvoidingView>
-            <SuccessModal
-                visible={showSuccessModal}
-                title="Notification Sent!"
-                message="Your notification has been sent successfully."
-                onClose={() => {
-                    setShowSuccessModal(false);
-                    navigation.goBack();
-                }}
-                buttonText="Done"
-            />
-        </GradientBackground>
+                <SuccessModal
+                    visible={showSuccessModal}
+                    title="Notification Sent!"
+                    message="Your notification has been broadcast successfully."
+                    onClose={() => {
+                        setShowSuccessModal(false);
+                        navigation.goBack();
+                    }}
+                    buttonText="Done"
+                />
+            </View>
+        </ScreenBackground>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
+const createStyles = (isDark: boolean, isDesktop: boolean) => StyleSheet.create({
     loadingContainer: {
-        flex: 1,
+        height: 300,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#4c669f',
     },
-    header: {
+    scrollView: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+    },
+    contentContainer: {
+        padding: 16,
+        paddingBottom: 40,
+    },
+    card: {
+        borderRadius: 20,
+        padding: 20,
+        elevation: 2,
+    },
+    cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingTop: 50,
-        paddingHorizontal: spacing.md,
-        paddingBottom: spacing.md,
+        marginBottom: 16,
+        gap: 12,
     },
-    backButton: {
-        marginRight: spacing.sm,
-    },
-    headerTitle: {
-        fontSize: 24,
+    cardTitle: {
+        fontSize: 16,
         fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+    audienceTypes: {
+        flexDirection: 'row',
+        gap: 8,
+        marginVertical: 12,
+        flexWrap: 'wrap',
+    },
+    typeButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        backgroundColor: 'transparent',
+    },
+    typeButtonActive: {
+        backgroundColor: '#4F46E5',
+        borderColor: '#4F46E5',
+    },
+    typeButtonText: {
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    typeButtonTextActive: {
         color: '#fff',
     },
-    content: {
-        padding: spacing.lg,
-    },
-    formCard: {
-        padding: spacing.lg,
-        borderRadius: borderRadius.xl,
-        backgroundColor: '#fff',
-        elevation: 4,
-    },
-    fieldContainer: {
-        marginBottom: spacing.lg,
-    },
     label: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: spacing.xs,
+        fontSize: 12,
+        fontWeight: '700',
+        marginBottom: 8,
+        letterSpacing: 0.5,
     },
-    pickerContainer: {
+    typeScroll: {
+        gap: 12,
+        paddingVertical: 4,
+    },
+    typeChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 100,
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: borderRadius.md,
-        backgroundColor: '#f9f9f9',
+        gap: 8,
+        marginRight: 10,
     },
-    picker: {
-        height: 50,
+    typeText: {
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    inputGroup: {
+        marginBottom: 16,
     },
     input: {
-        backgroundColor: '#fff',
+        backgroundColor: 'transparent',
+        fontSize: 15,
+    },
+    textArea: {
+        minHeight: 120,
     },
     sendButton: {
-        marginTop: spacing.md,
-    },
-    switchRow: {
+        marginTop: 24,
+        backgroundColor: '#4F46E5',
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacing.md,
-        paddingHorizontal: spacing.sm,
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 16,
+        gap: 8,
+        shadowColor: '#4F46E5',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    sendButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 

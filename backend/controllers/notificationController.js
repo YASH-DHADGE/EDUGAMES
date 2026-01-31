@@ -62,14 +62,25 @@ exports.sendNotification = async (req, res) => {
         const { recipientId, title, message, type, data } = req.body;
         const senderId = req.user._id;
 
-        // Check if this is a broadcast to all students
-        if (recipientId === 'all') {
+        // Check if this is a broadcast (all or filtered)
+        if (recipientId === 'all' || recipientId === 'filtered') {
+            const { filters } = req.body;
             const User = require('../models/User');
-            // Find all students assigned to this teacher
-            const students = await User.find({
+
+            // Build query
+            const query = {
                 role: 'student',
                 teacherId: senderId
-            });
+            };
+
+            // Apply filters if present
+            if (filters) {
+                if (filters.classLevel) query.selectedClass = filters.classLevel;
+                if (filters.learnerCategory) query.learnerCategory = filters.learnerCategory;
+            }
+
+            // Find students matching query
+            const students = await User.find(query);
 
             if (students.length === 0) {
                 return res.status(404).json({ message: 'No students found to notify.' });

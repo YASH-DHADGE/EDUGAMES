@@ -1,24 +1,37 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
-import { Text, ActivityIndicator } from 'react-native-paper';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Text, Surface, Avatar, Chip, IconButton } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useAuth } from '../context/AuthContext';
-import PendingUserCard from '../components/PendingUserCard';
 import api from '../services/api';
-import { spacing, theme } from '../theme';
-import GradientBackground from '../components/ui/GradientBackground';
-import CustomCard from '../components/ui/CustomCard';
+import ScreenBackground from '../components/ScreenBackground';
+import { useAppTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
+import SuccessModal from '../components/ui/SuccessModal';
+import CompactHeader from '../components/ui/CompactHeader';
 
 const TeacherApprovalsScreen = () => {
     const navigation = useNavigation();
-    const { user, logout } = useAuth();
+    const insets = useSafeAreaInsets();
+    const { isDark, theme } = useAppTheme();
+    const colors = theme.colors;
+    const { isDesktop, maxContentWidth } = useResponsive();
+    const { logout } = useAuth();
+
     const [pendingUsers, setPendingUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
-    const fetchPendingUsers = async () => {
+    const styles = createStyles(isDark, isDesktop);
+
+    const fetchPendingUsers = useCallback(async () => {
         try {
             const response = await api.get('/approval/pending');
             setPendingUsers(response.data);
@@ -28,105 +41,191 @@ const TeacherApprovalsScreen = () => {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchPendingUsers();
-    }, []);
+    }, [fetchPendingUsers]);
 
     const onRefresh = () => {
         setRefreshing(true);
         fetchPendingUsers();
     };
 
-    const handleApprove = (userId: string) => {
-        setPendingUsers(prev => prev.filter(u => u._id !== userId));
+    const handleAction = async (userId: string, action: 'approve' | 'reject') => {
+        setActionLoading(userId);
+        try {
+            await api.post(`/approval/${action}/${userId}`);
+
+            setPendingUsers(prev => prev.filter(u => u._id !== userId));
+            setSuccessMessage(action === 'approve' ? 'Student approved successfully' : 'Request rejected');
+            setShowSuccessModal(true);
+        } catch (error) {
+            console.error(`Failed to ${action} user:`, error);
+        } finally {
+            setActionLoading(null);
+        }
     };
 
-    const handleReject = (userId: string) => {
-        setPendingUsers(prev => prev.filter(u => u._id !== userId));
-    };
-
-    return (
-        <GradientBackground>
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <View>
-                            <Text style={styles.welcomeText}>Approvals</Text>
-                            <Text style={styles.subText}>Manage student requests</Text>
+    const renderPendingCard = (user: any, index: number) => (
+        <Animated.View
+            key={user._id}
+            entering={FadeInDown.delay(index * 100).duration(400)}
+            style={styles.cardContainer}
+        >
+            <Surface style={styles.card} elevation={2}>
+                <View style={styles.cardHeader}>
+                    <Avatar.Text
+                        size={50}
+                        label={user.name.substring(0, 2).toUpperCase()}
+                        style={{ backgroundColor: colors.primary }}
+                        color="#fff"
+                    />
+                    <View style={styles.userInfo}>
+                        <Text style={styles.userName}>{user.name}</Text>
+                        <Text style={styles.userEmail}>{user.email}</Text>
+                        <View style={styles.metaRow}>
+                            <View style={styles.metaItem}>
+                                <MaterialCommunityIcons name="school" size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+                                <Text style={styles.metaText}>Class {user.classNumber}</Text>
+                            </View>
+                            <View style={styles.metaDot} />
+                            <View style={styles.metaItem}>
+                                <MaterialCommunityIcons name="calendar-clock" size={14} color={isDark ? '#94A3B8' : '#64748B'} />
+                                <Text style={styles.metaText}>
+                                    {new Date(user.createdAt).toLocaleDateString()}
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                    <TouchableOpacity onPress={logout} style={styles.logoutButton}>
-                        <Ionicons name="log-out-outline" size={24} color="#fff" />
-                    </TouchableOpacity>
                 </View>
 
-                <ScrollView
-                    contentContainerStyle={styles.content}
-                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
-                >
-                    <View style={styles.sectionHeader}>
-                        <View style={styles.iconContainer}>
-                            <MaterialCommunityIcons name="account-clock" size={24} color="#fff" />
-                        </View>
-                        <Text style={styles.sectionTitle}>Pending Requests</Text>
-                        {pendingUsers.length > 0 && (
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{pendingUsers.length}</Text>
-                            </View>
+                {/* Actions */}
+                <View style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.rejectButton]}
+                        onPress={() => handleAction(user._id, 'reject')}
+                        disabled={actionLoading === user._id}
+                    >
+                        {actionLoading === user._id ? (
+                            <ActivityIndicator color="#EF4444" size="small" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="close" size={20} color="#EF4444" />
+                                <Text style={styles.rejectText}>Reject</Text>
+                            </>
                         )}
-                    </View>
+                    </TouchableOpacity>
 
+                    <TouchableOpacity
+                        style={[styles.actionButton, styles.approveButton]}
+                        onPress={() => handleAction(user._id, 'approve')}
+                        disabled={actionLoading === user._id}
+                    >
+                        <LinearGradient
+                            colors={['#10B981', '#059669']}
+                            style={styles.approveGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            {actionLoading === user._id ? (
+                                <ActivityIndicator color="#fff" size="small" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                                    <Text style={styles.approveText}>Approve</Text>
+                                </>
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </View>
+            </Surface>
+        </Animated.View>
+    );
+
+    return (
+        <ScreenBackground>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.primary}
+                    />
+                }
+            >
+                {/* Compact Header */}
+                <CompactHeader
+                    title="Student Approvals"
+                    subtitle={`${pendingUsers.length} Pending Request${pendingUsers.length !== 1 ? 's' : ''}`}
+                    onBack={() => navigation.goBack()}
+                    rightComponent={
+                        <TouchableOpacity onPress={logout} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 }}>
+                            <MaterialCommunityIcons name="logout" size={20} color="#fff" />
+                        </TouchableOpacity>
+                    }
+                />
+
+                <View style={[styles.contentContainer, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}>
                     {loading ? (
-                        <ActivityIndicator color="#fff" style={{ marginTop: 40 }} size="large" />
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                            <Text style={styles.loadingText}>Loading requests...</Text>
+                        </View>
                     ) : pendingUsers.length === 0 ? (
                         <Animated.View entering={FadeInDown.delay(200)} style={styles.emptyState}>
-                            <View style={styles.emptyIconContainer}>
-                                <MaterialCommunityIcons name="check-all" size={60} color="rgba(255,255,255,0.6)" />
-                            </View>
-                            <Text style={styles.emptyText}>All Caught Up!</Text>
-                            <Text style={styles.emptySubtext}>No pending student approvals at the moment.</Text>
+                            <LinearGradient
+                                colors={isDark ? ['#1E293B', '#0F172A'] : ['#F0F9FF', '#E0F2FE']}
+                                style={styles.emptyIconContainer}
+                            >
+                                <MaterialCommunityIcons name="check-all" size={64} color="#0EA5E9" />
+                            </LinearGradient>
+                            <Text style={styles.emptyTitle}>All Caught Up!</Text>
+                            <Text style={styles.emptyText}>No pending requests at the moment.</Text>
                         </Animated.View>
                     ) : (
-                        pendingUsers.map((user, index) => (
-                            <Animated.View
-                                key={user._id}
-                                entering={FadeInDown.delay(index * 100).duration(400)}
-                            >
-                                <PendingUserCard
-                                    user={user}
-                                    onApprove={handleApprove}
-                                    onReject={handleReject}
-                                />
-                            </Animated.View>
-                        ))
+                        <View style={styles.listContainer}>
+                            {pendingUsers.map(renderPendingCard)}
+                        </View>
                     )}
-                </ScrollView>
-            </View>
-        </GradientBackground>
+                </View>
+            </ScrollView>
+
+            <SuccessModal
+                visible={showSuccessModal}
+                title="Success"
+                message={successMessage}
+                onClose={() => setShowSuccessModal(false)}
+                buttonText="Done"
+            />
+        </ScreenBackground>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        paddingTop: 60,
+const createStyles = (isDark: boolean, isDesktop: boolean) => StyleSheet.create({
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: 40,
     },
     header: {
-        paddingHorizontal: spacing.xl,
-        marginBottom: spacing.lg,
+        paddingBottom: 40,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        elevation: 8,
+        shadowColor: '#0EA5E9',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    headerContentWrapper: {
+        width: '100%',
+    },
+    headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.md,
+        marginBottom: 20,
     },
     backButton: {
         padding: 8,
@@ -135,78 +234,170 @@ const styles = StyleSheet.create({
     },
     logoutButton: {
         padding: 8,
-        backgroundColor: 'rgba(239, 68, 68, 0.2)', // Red tint
+        backgroundColor: 'rgba(239, 68, 68, 0.3)',
         borderRadius: 12,
     },
-    welcomeText: {
-        fontSize: 24,
+    headerTextContainer: {
+        marginBottom: 20,
+    },
+    headerTitle: {
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#fff',
+        marginBottom: 4,
     },
-    subText: {
+    headerSubtitle: {
         fontSize: 14,
-        color: 'rgba(255,255,255,0.8)',
+        color: 'rgba(255, 255, 255, 0.9)',
     },
-    content: {
-        padding: spacing.lg,
-        paddingBottom: 100,
+    statsContainer: {
+        flexDirection: 'row',
     },
-    sectionHeader: {
+    statChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: spacing.lg,
-        gap: spacing.sm,
-    },
-    iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
         backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        gap: 8,
+    },
+    statCount: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    statLabel: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.9)',
+    },
+    contentContainer: {
+        padding: 20,
+        marginTop: -30,
+    },
+    loadingContainer: {
         alignItems: 'center',
+        marginTop: 60,
     },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    badge: {
-        backgroundColor: '#EF4444',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    badgeText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
+    loadingText: {
+        marginTop: 16,
+        color: isDark ? '#94A3B8' : '#64748B',
     },
     emptyState: {
         alignItems: 'center',
-        marginTop: 60,
+        marginTop: 40,
         padding: 20,
     },
     emptyIconContainer: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        marginBottom: 24,
     },
-    emptyText: {
-        color: '#fff',
+    emptyTitle: {
         fontSize: 24,
         fontWeight: 'bold',
+        color: isDark ? '#fff' : '#1E293B',
         marginBottom: 8,
     },
-    emptySubtext: {
-        color: 'rgba(255,255,255,0.7)',
+    emptyText: {
         fontSize: 16,
+        color: isDark ? '#94A3B8' : '#64748B',
         textAlign: 'center',
+    },
+    listContainer: {
+        gap: 16,
+    },
+    cardContainer: {
+        marginBottom: 16,
+    },
+    card: {
+        borderRadius: 24,
+        backgroundColor: isDark ? '#1E293B' : '#fff',
+        overflow: 'hidden',
+    },
+    cardHeader: {
+        padding: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+    },
+    userInfo: {
+        flex: 1,
+    },
+    userName: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: isDark ? '#fff' : '#1E293B',
+        marginBottom: 4,
+    },
+    userEmail: {
+        fontSize: 14,
+        color: isDark ? '#94A3B8' : '#64748B',
+        marginBottom: 8,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    metaItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    metaText: {
+        fontSize: 12,
+        color: isDark ? '#94A3B8' : '#64748B',
+    },
+    metaDot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: isDark ? '#475569' : '#CBD5E1',
+    },
+    actionRow: {
+        flexDirection: 'row',
+        padding: 16,
+        paddingTop: 0,
+        gap: 12,
+    },
+    actionButton: {
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    rejectButton: {
+        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2',
+        borderWidth: 1,
+        borderColor: isDark ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        gap: 8,
+    },
+    rejectText: {
+        color: '#EF4444',
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    approveButton: {
+
+    },
+    approveGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 13, // +1 for border compensation
+        gap: 8,
+    },
+    approveText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 15,
     },
 });
 

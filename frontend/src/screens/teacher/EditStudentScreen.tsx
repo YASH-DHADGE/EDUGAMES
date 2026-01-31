@@ -1,46 +1,42 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { Text, Surface } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Ionicons } from '@expo/vector-icons';
-import GradientBackground from '../../components/ui/GradientBackground';
-import CustomCard from '../../components/ui/CustomCard';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import api from '../../services/api';
+import ScreenBackground from '../../components/ScreenBackground';
+import CompactHeader from '../../components/ui/CompactHeader';
 import CustomInput from '../../components/ui/CustomInput';
 import CustomButton from '../../components/ui/CustomButton';
-import api from '../../services/api';
+import { useAppTheme } from '../../context/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 const EditStudentScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
-    const { student } = route.params as any;
+    const { student }: any = route.params;
+    const { isDark } = useAppTheme();
+    const { isDesktop, maxContentWidth } = useResponsive();
 
+    const [name, setName] = useState(student.name);
+    const [rollNo, setRollNo] = useState(student.rollNo);
+    const [status, setStatus] = useState(student.status || 'active');
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        name: student.name,
-        email: student.email,
-        grade: student.selectedClass?.toString() || '',
-        password: '',
-        status: student.status || 'active'
-    });
 
-    const handleSubmit = async () => {
-        if (!formData.name || !formData.email || !formData.grade) {
-            Alert.alert('Error', 'Name, Email and Grade are required');
+    const handleUpdate = async () => {
+        if (!name || !rollNo) {
+            Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         setLoading(true);
         try {
-            const updateData: any = {
-                name: formData.name,
-                email: formData.email,
-                grade: formData.grade,
-                status: formData.status
-            };
-            if (formData.password) {
-                updateData.password = formData.password;
-            }
-
-            await api.put(`/teacher/student/${student._id}`, updateData);
+            await api.put(`/teacher/student/${student._id}`, {
+                name,
+                rollNo,
+                status
+            });
             Alert.alert('Success', 'Student updated successfully', [
                 { text: 'OK', onPress: () => navigation.goBack() }
             ]);
@@ -51,141 +47,183 @@ const EditStudentScreen = () => {
         }
     };
 
+    const styles = createStyles(isDark, isDesktop);
+
     return (
-        <GradientBackground>
-            <ScrollView contentContainerStyle={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.title}>Edit Student</Text>
-                    <View style={{ width: 40 }} />
-                </View>
+        <ScreenBackground>
+            <CompactHeader
+                title="Edit Student"
+                subtitle="Update student details"
+                onBack={() => navigation.goBack()}
+            />
 
-                <CustomCard style={styles.formCard}>
-                    <CustomInput
-                        label="Full Name *"
-                        value={formData.name}
-                        onChangeText={(text) => setFormData({ ...formData, name: text })}
-                        style={styles.input}
-                    />
-                    <CustomInput
-                        label="Email Address *"
-                        value={formData.email}
-                        onChangeText={(text) => setFormData({ ...formData, email: text })}
-                        keyboardType="email-address"
-                        style={styles.input}
-                    />
-                    <CustomInput
-                        label="Grade (6-12) *"
-                        value={formData.grade}
-                        onChangeText={(text) => setFormData({ ...formData, grade: text })}
-                        keyboardType="numeric"
-                        style={styles.input}
-                    />
-                    <CustomInput
-                        label="New Password (Optional)"
-                        placeholder="Leave blank to keep current"
-                        value={formData.password}
-                        onChangeText={(text) => setFormData({ ...formData, password: text })}
-                        secureTextEntry
-                        style={styles.input}
-                    />
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <Animated.View
+                    entering={FadeInDown.delay(100).springify()}
+                    style={[styles.container, isDesktop && { maxWidth: maxContentWidth, alignSelf: 'center', width: '100%' }]}
+                >
+                    <Surface style={[styles.card, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
+                        <View style={styles.avatarContainer}>
+                            <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? '#334155' : '#E0E7FF' }]}>
+                                <Text style={[styles.avatarText, { color: '#4F46E5' }]}>
+                                    {name.charAt(0).toUpperCase()}
+                                </Text>
+                            </View>
+                        </View>
 
-                    <Text style={styles.label}>Status</Text>
-                    <View style={styles.statusContainer}>
-                        <TouchableOpacity
-                            style={[styles.statusButton, formData.status === 'active' && styles.activeStatus]}
-                            onPress={() => setFormData({ ...formData, status: 'active' })}
+                        <CustomInput
+                            label="Full Name"
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Enter student name"
+                            icon="account"
+                        />
+                        <View style={{ height: 16 }} />
+                        <CustomInput
+                            label="Roll Number"
+                            value={rollNo}
+                            onChangeText={setRollNo}
+                            placeholder="Enter roll number"
+                            icon="card-account-details"
+                        />
+
+                        <View style={styles.statusSection}>
+                            <Text style={[styles.label, { color: isDark ? '#CBD5E1' : '#4B5563' }]}>Status</Text>
+                            <View style={styles.statusOptions}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.statusChip,
+                                        status === 'active' && styles.statusActive,
+                                        isDark && status !== 'active' && { borderColor: '#475569' }
+                                    ]}
+                                    onPress={() => setStatus('active')}
+                                >
+                                    <Text style={[
+                                        styles.statusText,
+                                        status === 'active' && styles.statusTextActive,
+                                        isDark && status !== 'active' && { color: '#94A3B8' }
+                                    ]}>
+                                        Active
+                                    </Text>
+                                    {status === 'active' && <MaterialCommunityIcons name="check" size={16} color="#fff" />}
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.statusChip,
+                                        status === 'inactive' && styles.statusInactive,
+                                        isDark && status !== 'inactive' && { borderColor: '#475569' }
+                                    ]}
+                                    onPress={() => setStatus('inactive')}
+                                >
+                                    <Text style={[
+                                        styles.statusText,
+                                        status === 'inactive' && styles.statusTextActive,
+                                        isDark && status !== 'inactive' && { color: '#94A3B8' }
+                                    ]}>
+                                        Inactive
+                                    </Text>
+                                    {status === 'inactive' && <MaterialCommunityIcons name="check" size={16} color="#fff" />}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        <View style={{ height: 32 }} />
+
+                        <CustomButton
+                            onPress={handleUpdate}
+                            loading={loading}
                         >
-                            <Text style={[styles.statusText, formData.status === 'active' && styles.activeStatusText]}>Active</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.statusButton, formData.status === 'disabled' && styles.disabledStatus]}
-                            onPress={() => setFormData({ ...formData, status: 'disabled' })}
-                        >
-                            <Text style={[styles.statusText, formData.status === 'disabled' && styles.disabledStatusText]}>Disabled</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <CustomButton
-                        onPress={handleSubmit}
-                        disabled={loading}
-                        style={styles.submitButton}
-                    >
-                        {loading ? 'Updating...' : 'Update Student'}
-                    </CustomButton>
-                </CustomCard>
+                            Update Student
+                        </CustomButton>
+                    </Surface>
+                </Animated.View>
             </ScrollView>
-        </GradientBackground>
+        </ScreenBackground>
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (isDark: boolean, isDesktop: boolean) => StyleSheet.create({
+    scrollContent: {
+        paddingTop: 20,
+        paddingBottom: 40,
+    },
     container: {
-        padding: 20,
-        paddingTop: 60,
+        paddingHorizontal: 20,
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+    card: {
+        padding: 24,
+        borderRadius: 24,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+    },
+    avatarContainer: {
         alignItems: 'center',
-        marginBottom: 30,
+        marginBottom: 32,
     },
-    backButton: {
-        padding: 8,
+    avatarPlaceholder: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 4,
+        borderColor: isDark ? '#1E293B' : '#fff',
+        shadowColor: '#4F46E5',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 8,
     },
-    title: {
-        fontSize: 24,
+    avatarText: {
+        fontSize: 40,
         fontWeight: 'bold',
-        color: '#fff',
     },
-    formCard: {
-        padding: 20,
-    },
-    input: {
-        marginBottom: 15,
+    statusSection: {
+        marginTop: 16,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
-        marginBottom: 8,
+        marginBottom: 12,
         marginLeft: 4,
     },
-    statusContainer: {
+    statusOptions: {
         flexDirection: 'row',
-        marginBottom: 25,
-        gap: 10,
+        gap: 12,
     },
-    statusButton: {
+    statusChip: {
         flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        gap: 8,
     },
-    activeStatus: {
-        backgroundColor: '#D1FAE5',
-        borderColor: '#059669',
+    statusActive: {
+        backgroundColor: '#10B981',
+        borderColor: '#10B981',
     },
-    disabledStatus: {
-        backgroundColor: '#FEE2E2',
-        borderColor: '#DC2626',
+    statusInactive: {
+        backgroundColor: '#EF4444',
+        borderColor: '#EF4444',
     },
     statusText: {
+        fontSize: 14,
         fontWeight: '600',
-        color: '#6B7280',
+        color: '#64748B',
     },
-    activeStatusText: {
-        color: '#059669',
-    },
-    disabledStatusText: {
-        color: '#DC2626',
-    },
-    submitButton: {
-        marginTop: 10,
+    statusTextActive: {
+        color: '#fff',
     },
 });
 

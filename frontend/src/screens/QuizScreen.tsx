@@ -12,8 +12,12 @@ import { soundManager } from '../utils/soundEffects';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../services/api';
 
+import { useAppTheme } from '../context/ThemeContext';
+import ScreenBackground from '../components/ScreenBackground';
+
 const QuizScreen = ({ navigation, route }: any) => {
-    const theme = useTheme();
+    const { isDark } = useAppTheme();
+    const paperTheme = useTheme();
     const insets = useSafeAreaInsets();
     const { containerStyle, isMobile } = useResponsive();
     const [quiz, setQuiz] = useState<Quiz | null>(null);
@@ -127,22 +131,22 @@ const QuizScreen = ({ navigation, route }: any) => {
 
     if (loading) {
         return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={{ marginTop: 16, color: '#666' }}>Loading Quiz...</Text>
-            </View>
+            <ScreenBackground style={styles.centerContainer}>
+                <ActivityIndicator size="large" color={paperTheme.colors.primary} />
+                <Text style={{ marginTop: 16, color: isDark ? '#ccc' : '#666' }}>Loading Quiz...</Text>
+            </ScreenBackground>
         );
     }
 
     if (!quiz || quiz.questions.length === 0) {
         return (
-            <View style={styles.centerContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#666" />
-                <Text style={{ marginTop: 16 }}>No questions available.</Text>
+            <ScreenBackground style={styles.centerContainer}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={48} color={isDark ? '#ccc' : '#666'} />
+                <Text style={{ marginTop: 16, color: isDark ? '#fff' : '#000' }}>No questions available.</Text>
                 <Button mode="contained" onPress={() => navigation.goBack()} style={{ marginTop: 24 }}>
                     Go Back
                 </Button>
-            </View>
+            </ScreenBackground>
         );
     }
 
@@ -151,15 +155,17 @@ const QuizScreen = ({ navigation, route }: any) => {
     const isCorrect = selectedOptionIndex === currentQuestion.correctIndex;
 
     return (
-        <View style={styles.container}>
+        <ScreenBackground style={styles.container}>
             <ScrollView
                 contentContainerStyle={[styles.content, containerStyle, { maxWidth: 800, alignSelf: 'center', width: '100%', paddingHorizontal: isMobile ? spacing.md : spacing.xl }]}
                 showsVerticalScrollIndicator={false}
             >
                 {/* Header */}
                 <LinearGradient
-                    colors={['#6A5AE0', '#5243C2']}
+                    colors={['#6366F1', '#8B5CF6', '#A855F7']}
                     style={[styles.headerBackground, { paddingTop: insets.top + spacing.md }]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
                 >
                     <View style={styles.headerContent}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
@@ -186,8 +192,8 @@ const QuizScreen = ({ navigation, route }: any) => {
                     key={currentQuestionIndex}
                     entering={FadeInRight.duration(400)}
                 >
-                    <Surface style={styles.questionCard} elevation={2}>
-                        <Text variant="headlineSmall" style={styles.questionText}>
+                    <Surface style={[styles.questionCard, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.8)' : '#fff' }]} elevation={2}>
+                        <Text variant="headlineSmall" style={[styles.questionText, { color: isDark ? '#fff' : '#333' }]}>
                             {currentQuestion.question}
                         </Text>
                     </Surface>
@@ -227,7 +233,7 @@ const QuizScreen = ({ navigation, route }: any) => {
                     >
                         <Surface style={[
                             styles.feedbackCard,
-                            { borderLeftColor: isCorrect ? '#4CAF50' : '#F44336' }
+                            { borderLeftColor: isCorrect ? '#4CAF50' : '#F44336', backgroundColor: isDark ? '#1E293B' : '#fff' }
                         ]} elevation={4}>
                             <View style={styles.feedbackContent}>
                                 <View style={styles.feedbackHeader}>
@@ -245,15 +251,15 @@ const QuizScreen = ({ navigation, route }: any) => {
                                     </Text>
                                 </View>
                                 {!isCorrect && (
-                                    <Text variant="bodyMedium" style={{ marginTop: 4, color: '#666' }}>
-                                        The correct answer is: <Text style={{ fontWeight: 'bold' }}>{currentQuestion.options[currentQuestion.correctIndex]}</Text>
+                                    <Text variant="bodyMedium" style={{ marginTop: 4, color: isDark ? '#ccc' : '#666' }}>
+                                        The correct answer is: <Text style={{ fontWeight: 'bold', color: isDark ? '#fff' : '#000' }}>{currentQuestion.options[currentQuestion.correctIndex]}</Text>
                                     </Text>
                                 )}
                             </View>
                             <Button
                                 mode="contained"
                                 onPress={handleNext}
-                                style={[styles.nextButton, { backgroundColor: isCorrect ? '#4CAF50' : theme.colors.primary }]}
+                                style={[styles.nextButton, { backgroundColor: isCorrect ? '#4CAF50' : paperTheme.colors.primary }]}
                                 contentStyle={{ height: 48 }}
                                 labelStyle={{ fontSize: 16, fontWeight: 'bold' }}
                             >
@@ -265,14 +271,13 @@ const QuizScreen = ({ navigation, route }: any) => {
 
                 <View style={{ height: 100 }} />
             </ScrollView>
-        </View>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F4F7FC',
     },
     content: {
         paddingBottom: 40,
@@ -281,7 +286,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#F4F7FC',
     },
     headerBackground: {
         paddingBottom: spacing.xxl + 20,
@@ -322,7 +326,6 @@ const styles = StyleSheet.create({
     questionCard: {
         padding: spacing.xl,
         borderRadius: 24,
-        backgroundColor: '#fff',
         marginBottom: spacing.xl,
         minHeight: 140,
         justifyContent: 'center',
@@ -342,7 +345,6 @@ const styles = StyleSheet.create({
         marginTop: spacing.lg,
     },
     feedbackCard: {
-        backgroundColor: '#fff',
         borderRadius: 16,
         padding: 16,
         flexDirection: 'row',

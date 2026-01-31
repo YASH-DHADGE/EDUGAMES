@@ -9,6 +9,8 @@ import { theme, gradients, spacing, borderRadius } from '../theme';
 import { useTranslation } from '../i18n';
 import { fetchClassroomContent, ClassroomItem } from '../services/studentService';
 import { ActivityIndicator, Modal, ScrollView as NativeScrollView } from 'react-native';
+import { Surface } from 'react-native-paper';
+import ScreenBackground from '../components/ScreenBackground';
 
 const ClassroomScreen = () => {
     const navigation = useNavigation<any>();
@@ -62,9 +64,11 @@ const ClassroomScreen = () => {
     ];
 
     return (
-        <View style={styles.container}>
+        <ScreenBackground style={styles.container}>
             <LinearGradient
-                colors={['#4c669f', '#3b5998', '#192f6a']}
+                colors={['#6366F1', '#8B5CF6', '#A855F7']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={[styles.header, { paddingTop: insets.top + spacing.md }]}
             >
                 <View style={styles.headerTop}>
@@ -127,31 +131,35 @@ const ClassroomScreen = () => {
                     {/* Resources Section */}
                     <Text style={styles.sectionTitle}>Learning Resources</Text>
                     <View style={styles.resourcesRow}>
-                        <TouchableOpacity
-                            style={[styles.resourceCard, { backgroundColor: '#FFEBEE' }]}
-                            onPress={() => navigation.navigate('VideoLibrary')}
-                        >
-                            <LinearGradient
-                                colors={['#FF0000', '#CC0000']}
-                                style={styles.resourceIcon}
+                        <Surface style={[styles.resourceCard, { backgroundColor: theme.colors.surface }]} elevation={2}>
+                            <TouchableOpacity
+                                style={styles.resourceTouchable}
+                                onPress={() => navigation.navigate('VideoLibrary')}
                             >
-                                <Ionicons name="logo-youtube" size={24} color="#fff" />
-                            </LinearGradient>
-                            <Text style={styles.resourceTitle}>YouTube Videos</Text>
-                        </TouchableOpacity>
+                                <LinearGradient
+                                    colors={['#FF0000', '#CC0000']}
+                                    style={styles.resourceIcon}
+                                >
+                                    <Ionicons name="logo-youtube" size={24} color="#fff" />
+                                </LinearGradient>
+                                <Text style={styles.resourceTitle}>YouTube Videos</Text>
+                            </TouchableOpacity>
+                        </Surface>
 
-                        <TouchableOpacity
-                            style={[styles.resourceCard, { backgroundColor: '#E0F2F1' }]}
-                            onPress={() => navigation.navigate('StudentOnlineAssignments')}
-                        >
-                            <LinearGradient
-                                colors={['#11998e', '#38ef7d']}
-                                style={styles.resourceIcon}
+                        <Surface style={[styles.resourceCard, { backgroundColor: theme.colors.surface }]} elevation={2}>
+                            <TouchableOpacity
+                                style={styles.resourceTouchable}
+                                onPress={() => navigation.navigate('StudentOnlineAssignments')}
                             >
-                                <Ionicons name="desktop-outline" size={24} color="#fff" />
-                            </LinearGradient>
-                            <Text style={styles.resourceTitle}>E-Learning</Text>
-                        </TouchableOpacity>
+                                <LinearGradient
+                                    colors={['#11998e', '#38ef7d']}
+                                    style={styles.resourceIcon}
+                                >
+                                    <Ionicons name="desktop-outline" size={24} color="#fff" />
+                                </LinearGradient>
+                                <Text style={styles.resourceTitle}>E-Learning</Text>
+                            </TouchableOpacity>
+                        </Surface>
                     </View>
 
                     {/* Class Stream */}
@@ -165,30 +173,32 @@ const ClassroomScreen = () => {
                         </View>
                     ) : (
                         classroomContent.map((item, index) => (
-                            <Animated.View key={item.id} entering={FadeInDown.delay(300 + index * 100)} style={styles.streamCard}>
-                                <TouchableOpacity onPress={() => handleItemPress(item)} activeOpacity={0.9}>
-                                    <View style={styles.cardHeader}>
-                                        <View style={[styles.iconContainer, { backgroundColor: item.type === 'quiz' ? '#E3F2FD' : '#E8F5E9' }]}>
-                                            <MaterialCommunityIcons
-                                                name={item.type === 'quiz' ? 'format-list-checks' : 'book-open-page-variant'}
-                                                size={24}
-                                                color={item.type === 'quiz' ? '#1976D2' : '#2E7D32'}
-                                            />
+                            <Animated.View key={item.id} entering={FadeInDown.delay(300 + index * 100)}>
+                                <Surface style={[styles.streamCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+                                    <TouchableOpacity onPress={() => handleItemPress(item)} activeOpacity={0.9}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.iconContainer, { backgroundColor: item.type === 'quiz' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(16, 185, 129, 0.1)' }]}>
+                                                <MaterialCommunityIcons
+                                                    name={item.type === 'quiz' ? 'format-list-checks' : 'book-open-page-variant'}
+                                                    size={24}
+                                                    color={item.type === 'quiz' ? '#2563EB' : '#10B981'}
+                                                />
+                                            </View>
+                                            <View style={styles.cardInfo}>
+                                                <Text style={styles.cardTitle}>{item.title}</Text>
+                                                <Text style={styles.cardSubtitle}>{item.subtitle} • {item.teacher}</Text>
+                                                <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                                            </View>
                                         </View>
-                                        <View style={styles.cardInfo}>
-                                            <Text style={styles.cardTitle}>{item.title}</Text>
-                                            <Text style={styles.cardSubtitle}>{item.subtitle} • {item.teacher}</Text>
-                                            <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                                        <Text style={styles.cardDescription} numberOfLines={3}>{item.description}</Text>
+                                        <View style={styles.cardFooter}>
+                                            <Text style={styles.actionText}>
+                                                {item.type === 'quiz' ? 'Take Quiz' : 'Read Chapter'}
+                                            </Text>
+                                            <MaterialCommunityIcons name="arrow-right" size={16} color={theme.colors.primary} />
                                         </View>
-                                    </View>
-                                    <Text style={styles.cardDescription} numberOfLines={3}>{item.description}</Text>
-                                    <View style={styles.cardFooter}>
-                                        <Text style={styles.actionText}>
-                                            {item.type === 'quiz' ? 'Take Quiz' : 'Read Chapter'}
-                                        </Text>
-                                        <MaterialCommunityIcons name="arrow-right" size={16} color={theme.colors.primary} />
-                                    </View>
-                                </TouchableOpacity>
+                                    </TouchableOpacity>
+                                </Surface>
                             </Animated.View>
                         ))
                     )}
@@ -215,14 +225,13 @@ const ClassroomScreen = () => {
                     </NativeScrollView>
                 </View>
             </Modal>
-        </View>
+        </ScreenBackground>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F7FA',
     },
     header: {
         paddingBottom: spacing.xl * 1.5,
@@ -344,16 +353,14 @@ const styles = StyleSheet.create({
     },
     resourceCard: {
         flex: 1,
+        borderRadius: 16,
+        marginRight: spacing.md,
+        overflow: 'hidden',
+    },
+    resourceTouchable: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: spacing.md,
-        borderRadius: 16,
-        marginRight: spacing.md,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
     },
     resourceIcon: {
         width: 40,

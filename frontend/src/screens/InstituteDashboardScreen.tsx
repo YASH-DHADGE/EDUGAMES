@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from 'react-native';
-import { Text, ActivityIndicator, Divider } from 'react-native-paper';
+import { Text, ActivityIndicator, Divider, Surface } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import PendingUserCard from '../components/PendingUserCard';
 import api from '../services/api';
-import { theme as appTheme } from '../theme';
+import ScreenBackground from '../components/ScreenBackground';
+import { useAppTheme } from '../context/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
+import { spacing } from '../theme';
+import CompactHeader from '../components/ui/CompactHeader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -16,16 +21,18 @@ const InstituteDashboardScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { user, logout } = useAuth();
+    const { isDark } = useAppTheme();
+    const { isMobile, containerStyle } = useResponsive();
 
     // Professional Theme - Indigo Focus
     const theme = {
         primary: '#1E1B4B', // Indigo 950
         secondary: '#312E81', // Indigo 900
         accent: '#4F46E5', // Indigo 600
-        background: '#F8FAFC', // Slate 50
-        card: '#FFFFFF',
-        text: '#0F172A', // Slate 900
-        textSecondary: '#64748B', // Slate 500
+        background: isDark ? '#0F172A' : '#F8FAFC', // Slate 900 or Slate 50
+        card: isDark ? '#1E293B' : '#FFFFFF',
+        text: isDark ? '#F8FAFC' : '#0F172A', // Slate 900
+        textSecondary: isDark ? '#94A3B8' : '#64748B', // Slate 500
     };
 
     const styles = createStyles(theme, insets);
@@ -89,26 +96,22 @@ const InstituteDashboardScreen = () => {
     ];
 
     return (
-        <View style={styles.container}>
-            {/* Top Navigation */}
-            <View style={styles.topNav}>
-                <View style={styles.navLeft}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
-                        <Ionicons name="arrow-back" size={24} color={theme.text} />
+        <ScreenBackground style={styles.container}>
+            {/* Compact Header */}
+            <CompactHeader
+                title="Institute Portal"
+                subtitle={user?.name || 'Dashboard'}
+                onBack={() => navigation.goBack()}
+                rightComponent={
+                    <TouchableOpacity onPress={logout} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 }}>
+                        <Ionicons name="log-out-outline" size={20} color="#fff" />
                     </TouchableOpacity>
-                    <View>
-                        <Text style={styles.navTitle}>Institute Portal</Text>
-                        <Text style={styles.navSubtitle}>{user?.name || 'Dashboard'}</Text>
-                    </View>
-                </View>
-                <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                </TouchableOpacity>
-            </View>
+                }
+            />
 
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { maxWidth: 900, width: '100%', alignSelf: 'center' }]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
@@ -193,25 +196,25 @@ const InstituteDashboardScreen = () => {
 
                 <View style={{ height: 40 }} />
             </ScrollView>
-        </View>
+        </ScreenBackground>
     );
 };
 
 const createStyles = (theme: any, insets: any) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.background,
     },
-    topNav: {
+    headerBackground: {
+        paddingBottom: 24,
+        paddingHorizontal: 20,
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+        marginBottom: 8,
+    },
+    topNavContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: insets.top + 15,
-        paddingBottom: 15,
-        backgroundColor: theme.card,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     navLeft: {
         flexDirection: 'row',
@@ -220,19 +223,21 @@ const createStyles = (theme: any, insets: any) => StyleSheet.create({
     },
     iconBtn: {
         padding: 4,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderRadius: 8,
     },
     navTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: theme.text,
+        color: '#fff',
     },
     navSubtitle: {
         fontSize: 12,
-        color: theme.textSecondary,
+        color: 'rgba(255,255,255,0.8)',
     },
     logoutBtn: {
         padding: 8,
-        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 8,
     },
     scrollView: {
