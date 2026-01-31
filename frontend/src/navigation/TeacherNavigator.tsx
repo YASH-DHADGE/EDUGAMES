@@ -24,6 +24,7 @@ const TeacherNavigator = () => {
     return (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="TeacherHome" component={TeacherHomeScreen} />
+            <Stack.Screen name="TeacherClassroomList" component={require('../screens/teacher/TeacherClassroomListScreen').default} />
             <Stack.Screen name="StudentList" component={StudentListScreen} />
             <Stack.Screen name="CreateStudent" component={CreateStudentScreen} />
             <Stack.Screen name="EditStudent" component={EditStudentScreen} />

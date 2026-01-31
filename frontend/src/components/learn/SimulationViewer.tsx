@@ -149,61 +149,21 @@ const SimulationViewer: React.FC<SimulationViewerProps> = ({ visible, title, fil
                 onRequestClose={onClose}
             >
                 <View style={styles.container}>
-                    {/* Enhanced Header with Multiple Gradients */}
-                    <View style={styles.headerWrapper}>
-                        <LinearGradient
-                            colors={['#6A5AE0', '#8E2DE2', '#5B4B8A']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.headerGradient}
-                        >
-                            {/* Decorative circles */}
-                            <View style={styles.decorativeCircle1} />
-                            <View style={styles.decorativeCircle2} />
-
-                            <View style={styles.headerContent}>
-                                <View style={styles.headerRow}>
-                                    {/* Close Button with Blur */}
-                                    <TouchableOpacity onPress={onClose} style={styles.controlButton}>
-                                        <BlurView intensity={20} style={styles.blurButton}>
-                                            <MaterialCommunityIcons name="close" size={24} color="#fff" />
-                                        </BlurView>
-                                    </TouchableOpacity>
-
-                                    {/* Title Section with Enhanced Badge */}
-                                    <View style={styles.headerTitleContainer}>
-                                        <Text variant="titleLarge" style={styles.headerTitle} numberOfLines={1}>
-                                            {title}
-                                        </Text>
-                                        <LinearGradient
-                                            colors={['rgba(255, 215, 0, 0.3)', 'rgba(255, 165, 0, 0.3)']}
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 0 }}
-                                            style={styles.brandingBadge}
-                                        >
-                                            <View style={styles.badgeGlow} />
-                                            <MaterialCommunityIcons name="brain" size={16} color="#FFD700" />
-                                            <Text style={styles.brandingText}>StreakWise Interactive</Text>
-                                            <View style={styles.badgeDot} />
-                                        </LinearGradient>
-                                    </View>
-
-                                    {/* Fullscreen Button with Blur */}
-                                    <TouchableOpacity onPress={toggleFullscreen} style={styles.controlButton}>
-                                        <BlurView intensity={20} style={styles.blurButton}>
-                                            <MaterialCommunityIcons
-                                                name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
-                                                size={24}
-                                                color="#fff"
-                                            />
-                                        </BlurView>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </LinearGradient>
+                    {/* Close and Fullscreen Buttons - Floating */}
+                    <View style={styles.floatingControls}>
+                        <TouchableOpacity onPress={onClose} style={styles.floatingButton}>
+                            <MaterialCommunityIcons name="close" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={toggleFullscreen} style={styles.floatingButton}>
+                            <MaterialCommunityIcons
+                                name={isFullscreen ? "fullscreen-exit" : "fullscreen"}
+                                size={24}
+                                color="#fff"
+                            />
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Simulation Container with Shadow */}
+                    {/* Simulation Container */}
                     <View style={styles.simulationContainer}>
                         <View style={styles.simulationInner}>
                             <iframe
@@ -848,6 +808,24 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '700',
+    },
+    floatingControls: {
+        position: 'absolute',
+        top: Platform.OS === 'web' ? 20 : 50,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        zIndex: 1000,
+    },
+    floatingButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 

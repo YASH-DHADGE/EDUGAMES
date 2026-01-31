@@ -95,6 +95,31 @@ class ProgressService {
         }
     }
 
+    // Generic update progress method
+    async updateProgress(chapterId: string, data: Partial<ChapterProgress>): Promise<void> {
+        const allProgress = await this.getAllProgress();
+        const existingIndex = allProgress.findIndex(p => p.chapterId === chapterId);
+
+        if (existingIndex >= 0) {
+            allProgress[existingIndex] = { ...allProgress[existingIndex], ...data };
+            await storeData(PROGRESS_STORAGE_KEY, allProgress);
+        } else {
+            // Create if not exists (fallback)
+            // This assumes specific creation logic isn't strictly needed if we are just updating status
+            console.warn('[ProgressService] Attempting to update non-existent progress, creating new entry stub');
+            const progressItem: ChapterProgress = {
+                chapterId,
+                subjectId: data.subjectId || 'unknown',
+                classId: data.classId || 'unknown',
+                completed: data.completed || false,
+                lastAccessedAt: new Date().toISOString(),
+                ...data
+            } as ChapterProgress;
+            allProgress.push(progressItem);
+            await storeData(PROGRESS_STORAGE_KEY, allProgress);
+        }
+    }
+
     // Get subject progress (calculate from chapters)
     async getSubjectProgress(
         subjectId: string,

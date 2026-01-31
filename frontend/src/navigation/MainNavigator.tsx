@@ -100,6 +100,7 @@ const MainNavigator = () => {
             <Stack.Screen name="TeacherChapterViewer" component={TeacherChapterViewerScreen} />
             <Stack.Screen name="CourseProgress" component={require('../screens/CourseProgressScreen').default} />
 
+            <Stack.Screen name="ClassroomList" component={require('../screens/ClassroomListScreen').default} />
             <Stack.Screen name="Classroom" component={ClassroomScreen} />
             <Stack.Screen name="VideoLibrary" component={require('../screens/VideoLibraryScreen').default} />
             <Stack.Screen name="VideoPlayer" component={require('../screens/VideoPlayerScreen').default} />

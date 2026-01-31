@@ -33,12 +33,32 @@ export interface TeacherStats {
 /**
  * Get teacher dashboard statistics
  */
-export const getTeacherStats = async (): Promise<TeacherStats> => {
-    // TODO: Replace with actual API call when backend is ready
-    // const response = await api.get('/teacher/stats');
-    // return response.data;
+// Classroom Types
+export interface Classroom {
+    _id: string;
+    title: string;
+    subject: string;
+    classNumber: number;
+    section?: string;
+    room?: string;
+    gradient: string[];
+    teacherId: string;
+    students?: any[];
+}
 
-    // Mock implementation
+export interface CreateClassroomData {
+    title: string;
+    subject: string;
+    classNumber: number;
+    section?: string;
+    room?: string;
+    gradient?: string[];
+    autoEnroll?: boolean;
+}
+
+// Stats (Mock for now, kept as is)
+export const getTeacherStats = async (): Promise<TeacherStats> => {
+    // ... (existing mock stats code)
     console.log('[TeacherService] Fetching teacher stats (mock)');
     await new Promise((resolve) => setTimeout(resolve, 800));
 
@@ -57,47 +77,66 @@ export const getTeacherStats = async (): Promise<TeacherStats> => {
             { topic: 'Physics', subject: 'Science', correctRate: 58, attempts: 15 },
             { topic: 'World Wars', subject: 'History', correctRate: 61, attempts: 12 },
         ],
-        recentAttempts: [
-            {
-                id: '1',
-                studentName: 'Rajesh Kumar',
-                subject: 'Mathematics',
-                score: 8,
-                totalQuestions: 10,
-                timestamp: Date.now() - 3600000,
-            },
-            {
-                id: '2',
-                studentName: 'Priya Sharma',
-                subject: 'Science',
-                score: 7,
-                totalQuestions: 10,
-                timestamp: Date.now() - 7200000,
-            },
-            {
-                id: '3',
-                studentName: 'Amit Patel',
-                subject: 'English',
-                score: 6,
-                totalQuestions: 10,
-                timestamp: Date.now() - 10800000,
-            },
-            {
-                id: '4',
-                studentName: 'Sneha Reddy',
-                subject: 'History',
-                score: 9,
-                totalQuestions: 10,
-                timestamp: Date.now() - 14400000,
-            },
-            {
-                id: '5',
-                studentName: 'Vikram Singh',
-                subject: 'Mathematics',
-                score: 5,
-                totalQuestions: 10,
-                timestamp: Date.now() - 18000000,
-            },
-        ],
+        recentAttempts: [],
     };
+};
+
+// Classroom API
+export const fetchClassrooms = async (): Promise<Classroom[]> => {
+    try {
+        const response = await api.get('/teacher/classrooms');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching classrooms:', error);
+        throw error;
+    }
+};
+
+export const createClassroom = async (data: CreateClassroomData): Promise<Classroom> => {
+    try {
+        const response = await api.post('/teacher/classroom', data);
+        return response.data;
+    } catch (error) {
+        console.error('Error creating classroom:', error);
+        throw error;
+    }
+};
+
+export const deleteClassroom = async (id: string): Promise<void> => {
+    try {
+        await api.delete(`/teacher/classroom/${id}`);
+    } catch (error) {
+        console.error('Error deleting classroom:', error);
+        throw error;
+    }
+};
+
+export const fetchClassroom = async (id: string): Promise<Classroom> => {
+    try {
+        const response = await api.get(`/teacher/classroom/${id}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching classroom:', error);
+        throw error;
+    }
+};
+
+export const addStudentToClassroom = async (classroomId: string, studentEmail: string): Promise<any> => {
+    try {
+        const response = await api.post('/teacher/classroom/add-student', { classroomId, studentEmail });
+        return response.data;
+    } catch (error) {
+        console.error('Error adding student:', error);
+        throw error;
+    }
+};
+
+export const removeStudentFromClassroom = async (classroomId: string, studentId: string): Promise<void> => {
+    try {
+        const response = await api.delete(`/teacher/classroom/${classroomId}/student/${studentId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error removing student:', error);
+        throw error;
+    }
 };

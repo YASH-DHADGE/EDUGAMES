@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator, Linking, Alert, ScrollView as NativeScrollView } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,15 +8,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { theme, gradients, spacing, borderRadius } from '../theme';
 import { useTranslation } from '../i18n';
 import { fetchClassroomContent, ClassroomItem } from '../services/studentService';
-import { ActivityIndicator, Modal, ScrollView as NativeScrollView } from 'react-native';
-import { Surface } from 'react-native-paper';
+import { Surface, Button, IconButton, useTheme, Dialog, Portal, Paragraph } from 'react-native-paper';
 import ScreenBackground from '../components/ScreenBackground';
 
 const ClassroomScreen = () => {
     const navigation = useNavigation<any>();
+    const route = useRoute<any>(); // Add useRoute
     const { t } = useTranslation();
     const insets = useSafeAreaInsets();
-    const [activeTab, setActiveTab] = useState('stream');
+    const [activeTab, setActiveTab] = useState<'stream' | 'classwork' | 'people'>('stream');
     const [classroomContent, setClassroomContent] = useState<ClassroomItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedChapter, setSelectedChapter] = useState<ClassroomItem | null>(null);
@@ -29,11 +29,13 @@ const ClassroomScreen = () => {
 
     React.useEffect(() => {
         loadContent();
-    }, []);
+    }, [route.params?.subject]); // Reload if subject changes
 
     const loadContent = async () => {
         try {
-            const data = await fetchClassroomContent();
+            setLoading(true);
+            const subject = route.params?.subject;
+            const data = await fetchClassroomContent(subject);
             setClassroomContent(data.content);
             setMeta(data.meta);
         } catch (error) {
@@ -63,166 +65,268 @@ const ClassroomScreen = () => {
         { id: 2, subject: 'Physics', topic: 'Laws of Motion', time: '02:00 PM', status: 'upcoming' },
     ];
 
+    const renderStreamTab = () => (
+        <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+            {/* Banner */}
+            <View style={styles.bannerContainer}>
+                <Image
+                    source={{ uri: 'https://gstatic.com/classroom/themes/img_code.jpg' }} // Generic coding theme image
+                    style={styles.bannerImage}
+                />
+                <View style={styles.bannerOverlay} />
+                <View style={styles.bannerContent}>
+                    <Text style={styles.bannerTitle}>{meta.className}</Text>
+                    <Text style={styles.bannerSubtitle}>{meta.schoolName}</Text>
+                </View>
+                <TouchableOpacity style={styles.bannerInfoBtn}>
+                    <MaterialCommunityIcons name="information-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Announcement Box placeholder */}
+            <Surface style={styles.announcementBox} elevation={1}>
+                <Image
+                    source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(meta.className)}&background=random` }}
+                    style={styles.tinyAvatar}
+                />
+                <Text style={styles.announcementPlaceholder}>Share with your class...</Text>
+            </Surface>
+
+            {/* Live Class Pinned */}
+            {liveClasses.some(c => c.status === 'live') && (
+                <Surface style={styles.liveStreamCard} elevation={1}>
+                    <View style={styles.liveHeader}>
+                        <MaterialCommunityIcons name="video-wireless" size={24} color="#d93025" />
+                        <Text style={styles.liveTitle}>Live Class Now</Text>
+                    </View>
+                    <Text style={styles.liveBody}>{liveClasses.find(c => c.status === 'live')?.subject}: {liveClasses.find(c => c.status === 'live')?.topic}</Text>
+                    <TouchableOpacity style={styles.joinBtn}>
+                        <Text style={styles.joinBtnText}>JOIN</Text>
+                    </TouchableOpacity>
+                </Surface>
+            )}
+
+            {/* Stream List */}
+            <View style={styles.streamList}>
+                {loading ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 20 }} />
+                ) : classroomContent.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>No classwork yet</Text>
+                    </View>
+                ) : (
+                    classroomContent.map((item, index) => (
+                        <Animated.View key={item.id} entering={FadeInDown.delay(index * 50)}>
+                            <Surface style={[styles.streamItem, { opacity: item.status === 'completed' ? 0.6 : 1 }]} elevation={1}>
+                                <TouchableOpacity onPress={() => handleItemPress(item)} style={styles.streamTouchable} activeOpacity={0.7}>
+                                    <View style={[styles.streamIconCircle, { backgroundColor: item.type === 'quiz' ? '#1967d2' : '#e37400' }]}>
+                                        <MaterialCommunityIcons
+                                            name={item.type === 'quiz' ? 'clipboard-text' : 'book-open-variant'}
+                                            size={24}
+                                            color="#fff"
+                                        />
+                                    </View>
+                                    <View style={styles.streamTextContent}>
+                                        <Text style={styles.streamTitle}>
+                                            {item.teacher} posted a new {item.type === 'quiz' ? 'assignment' : 'material'}: {item.title}
+                                        </Text>
+                                        <Text style={styles.streamDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                                    </View>
+                                    {item.status === 'completed' && (
+                                        <MaterialCommunityIcons name="check" size={20} color="#137333" />
+                                    )}
+                                </TouchableOpacity>
+                            </Surface>
+                        </Animated.View>
+                    ))
+                )}
+            </View>
+        </ScrollView>
+    );
+
+    const renderClassworkTab = () => (
+        <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+            {/* Resources Section */}
+            <View style={styles.topicSection}>
+                <Text style={styles.topicTitle}>Quick Access</Text>
+                <View style={styles.topicDivider} />
+
+                <TouchableOpacity style={styles.classworkItem} onPress={() => navigation.navigate('VideoLibrary')}>
+                    <View style={[styles.classworkIcon, { backgroundColor: '#d93025' }]}>
+                        <Ionicons name="logo-youtube" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.classworkInfo}>
+                        <Text style={styles.classworkTitle}>YouTube Video Library</Text>
+                        <Text style={styles.classworkSubtitle}>External Resources</Text>
+                    </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.classworkItem} onPress={() => navigation.navigate('StudentOnlineAssignments')}>
+                    <View style={[styles.classworkIcon, { backgroundColor: '#188038' }]}>
+                        <Ionicons name="desktop-outline" size={20} color="#fff" />
+                    </View>
+                    <View style={styles.classworkInfo}>
+                        <Text style={styles.classworkTitle}>E-Learning Modules</Text>
+                        <Text style={styles.classworkSubtitle}>Interactive Content</Text>
+                    </View>
+                </TouchableOpacity>
+            </View>
+
+            {/* Quizzes Section */}
+            {classroomContent.some(i => i.type === 'quiz') && (
+                <View style={styles.topicSection}>
+                    <Text style={styles.topicTitle}>Assignments & Quizzes</Text>
+                    <View style={styles.topicDivider} />
+                    {classroomContent.filter(i => i.type === 'quiz').map((item) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            style={[styles.classworkItem, item.status === 'completed' && { opacity: 0.5 }]}
+                            onPress={() => handleItemPress(item)}
+                        >
+                            <View style={[styles.classworkIcon, { backgroundColor: item.status === 'completed' ? '#bdc1c6' : '#1967d2' }]}>
+                                <MaterialCommunityIcons name="clipboard-text" size={20} color="#fff" />
+                            </View>
+                            <View style={styles.classworkInfo}>
+                                <Text style={[styles.classworkTitle, item.status === 'completed' && { textDecorationLine: 'line-through' }]}>{item.title}</Text>
+                                <Text style={styles.classworkSubtitle}>Due {new Date(item.date).toLocaleDateString()}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+
+            {/* Chapters Section */}
+            {classroomContent.some(i => i.type === 'chapter') && (
+                <View style={styles.topicSection}>
+                    <Text style={styles.topicTitle}>Reading Materials</Text>
+                    <View style={styles.topicDivider} />
+                    {classroomContent.filter(i => i.type === 'chapter').map((item) => (
+                        <TouchableOpacity key={item.id} style={styles.classworkItem} onPress={() => handleItemPress(item)}>
+                            <View style={[styles.classworkIcon, { backgroundColor: '#e37400' }]}>
+                                <MaterialCommunityIcons name="book-open-variant" size={20} color="#fff" />
+                            </View>
+                            <View style={styles.classworkInfo}>
+                                <Text style={styles.classworkTitle}>{item.title}</Text>
+                                <Text style={styles.classworkSubtitle}>Posted {new Date(item.date).toLocaleDateString()}</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+        </ScrollView>
+    );
+
+    const renderPeopleTab = () => (
+        <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.topicSection}>
+                <Text style={[styles.topicTitle, { color: '#1967d2', fontSize: 24, marginBottom: 16 }]}>Teachers</Text>
+                <View style={[styles.topicDivider, { backgroundColor: '#1967d2' }]} />
+
+                {meta.teachers.map((teacher, index) => (
+                    <View key={index} style={styles.peopleItem}>
+                        <Image source={{ uri: teacher.avatar }} style={styles.peopleAvatar} />
+                        <View style={styles.peopleInfo}>
+                            <Text style={styles.peopleName}>{teacher.name}</Text>
+                            <Text style={styles.peopleRole}>{teacher.subject}</Text>
+                        </View>
+                        <TouchableOpacity>
+                            <MaterialCommunityIcons name="email-outline" size={20} color="#5f6368" />
+                        </TouchableOpacity>
+                    </View>
+                ))}
+            </View>
+
+            <View style={[styles.topicSection, { marginTop: 40 }]}>
+                <Text style={[styles.topicTitle, { color: '#1967d2', fontSize: 24, marginBottom: 16 }]}>Classmates</Text>
+                <View style={[styles.topicDivider, { backgroundColor: '#1967d2' }]} />
+                {/* Mock Classmates */}
+                <View style={styles.peopleItem}>
+                    <View style={[styles.peopleAvatar, { backgroundColor: '#1e88e5', justifyContent: 'center', alignItems: 'center' }]}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>J</Text>
+                    </View>
+                    <Text style={styles.peopleName}>John Doe</Text>
+                </View>
+                <View style={styles.peopleItem}>
+                    <View style={[styles.peopleAvatar, { backgroundColor: '#c2185b', justifyContent: 'center', alignItems: 'center' }]}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>S</Text>
+                    </View>
+                    <Text style={styles.peopleName}>Sarah Smith</Text>
+                </View>
+            </View>
+        </ScrollView>
+    );
+
     return (
         <ScreenBackground style={styles.container}>
-            <LinearGradient
-                colors={['#6366F1', '#8B5CF6', '#A855F7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[styles.header, { paddingTop: insets.top + spacing.md }]}
-            >
-                <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={24} color="#fff" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{t('classroom.title')}</Text>
-                    <TouchableOpacity style={styles.notificationButton}>
-                        <Ionicons name="notifications-outline" size={24} color="#fff" />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Quick Stats or Welcome */}
-                <View style={styles.welcomeParams}>
-                    <Text style={styles.className}>{meta.className}</Text>
-                    <Text style={styles.schoolName}>{meta.schoolName}</Text>
-                </View>
-            </LinearGradient>
-
-            <View style={styles.contentContainer}>
-                {/* Live Now Section */}
-                {liveClasses.some(c => c.status === 'live') && (
-                    <Animated.View entering={FadeInDown.delay(100)} style={styles.liveSection}>
-                        <LinearGradient
-                            colors={['#FF416C', '#FF4B2B']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.liveCard}
-                        >
-                            <View style={styles.liveBadge}>
-                                <View style={styles.liveDot} />
-                                <Text style={styles.liveText}>{t('classroom.liveNow')}</Text>
-                            </View>
-                            <Text style={styles.liveSubject}>{liveClasses.find(c => c.status === 'live')?.subject}</Text>
-                            <Text style={styles.liveTopic}>{liveClasses.find(c => c.status === 'live')?.topic}</Text>
-                            <TouchableOpacity style={styles.joinButton}>
-                                <Text style={styles.joinButtonText}>{t('classroom.joinClass')}</Text>
-                            </TouchableOpacity>
-                        </LinearGradient>
-                    </Animated.View>
-                )}
-
-                <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    {/* Teachers Horizontal Scroll */}
-                    <Text style={styles.sectionTitle}>{t('classroom.myTeachers')}</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teachersRow}>
-                        {meta.teachers.length > 0 ? (
-                            meta.teachers.map((teacher, index) => (
-                                <Animated.View key={teacher.id} entering={FadeInDown.delay(200 + index * 50)} style={styles.teacherCard}>
-                                    <Image source={{ uri: teacher.avatar }} style={styles.teacherAvatar} />
-                                    <Text style={styles.teacherName}>{teacher.name}</Text>
-                                    <Text style={styles.teacherSubject}>{teacher.subject}</Text>
-                                </Animated.View>
-                            ))
-                        ) : (
-                            <Text style={{ color: '#666', marginLeft: 10, fontStyle: 'italic' }}>No teachers active yet.</Text>
-                        )}
-                    </ScrollView>
-
-                    {/* Resources Section */}
-                    <Text style={styles.sectionTitle}>Learning Resources</Text>
-                    <View style={styles.resourcesRow}>
-                        <Surface style={[styles.resourceCard, { backgroundColor: theme.colors.surface }]} elevation={2}>
-                            <TouchableOpacity
-                                style={styles.resourceTouchable}
-                                onPress={() => navigation.navigate('VideoLibrary')}
-                            >
-                                <LinearGradient
-                                    colors={['#FF0000', '#CC0000']}
-                                    style={styles.resourceIcon}
-                                >
-                                    <Ionicons name="logo-youtube" size={24} color="#fff" />
-                                </LinearGradient>
-                                <Text style={styles.resourceTitle}>YouTube Videos</Text>
-                            </TouchableOpacity>
-                        </Surface>
-
-                        <Surface style={[styles.resourceCard, { backgroundColor: theme.colors.surface }]} elevation={2}>
-                            <TouchableOpacity
-                                style={styles.resourceTouchable}
-                                onPress={() => navigation.navigate('StudentOnlineAssignments')}
-                            >
-                                <LinearGradient
-                                    colors={['#11998e', '#38ef7d']}
-                                    style={styles.resourceIcon}
-                                >
-                                    <Ionicons name="desktop-outline" size={24} color="#fff" />
-                                </LinearGradient>
-                                <Text style={styles.resourceTitle}>E-Learning</Text>
-                            </TouchableOpacity>
-                        </Surface>
+            <View style={styles.safeArea}>
+                {/* Top Navigation Bar */}
+                <View style={[styles.navBar, { paddingTop: insets.top + spacing.sm }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+                            <MaterialCommunityIcons name="arrow-left" size={24} color="#5f6368" />
+                        </TouchableOpacity>
+                        <Text style={styles.navTitle} numberOfLines={1}>{meta.className}</Text>
                     </View>
+                    <TouchableOpacity style={styles.navButton}>
+                        <MaterialCommunityIcons name="dots-vertical" size={24} color="#5f6368" />
+                    </TouchableOpacity>
+                </View>
 
-                    {/* Class Stream */}
-                    <Text style={styles.sectionTitle}>Class Stream</Text>
+                {/* Tabs Header */}
+                <View style={styles.tabHeader}>
+                    <TouchableOpacity
+                        style={[styles.tabItem, activeTab === 'stream' && styles.tabItemActive]}
+                        onPress={() => setActiveTab('stream')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'stream' && styles.tabTextActive]}>Stream</Text>
+                    </TouchableOpacity>
 
-                    {loading ? (
-                        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 20 }} />
-                    ) : classroomContent.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyText}>No content posted yet.</Text>
-                        </View>
-                    ) : (
-                        classroomContent.map((item, index) => (
-                            <Animated.View key={item.id} entering={FadeInDown.delay(300 + index * 100)}>
-                                <Surface style={[styles.streamCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
-                                    <TouchableOpacity onPress={() => handleItemPress(item)} activeOpacity={0.9}>
-                                        <View style={styles.cardHeader}>
-                                            <View style={[styles.iconContainer, { backgroundColor: item.type === 'quiz' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(16, 185, 129, 0.1)' }]}>
-                                                <MaterialCommunityIcons
-                                                    name={item.type === 'quiz' ? 'format-list-checks' : 'book-open-page-variant'}
-                                                    size={24}
-                                                    color={item.type === 'quiz' ? '#2563EB' : '#10B981'}
-                                                />
-                                            </View>
-                                            <View style={styles.cardInfo}>
-                                                <Text style={styles.cardTitle}>{item.title}</Text>
-                                                <Text style={styles.cardSubtitle}>{item.subtitle} • {item.teacher}</Text>
-                                                <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString()}</Text>
-                                            </View>
-                                        </View>
-                                        <Text style={styles.cardDescription} numberOfLines={3}>{item.description}</Text>
-                                        <View style={styles.cardFooter}>
-                                            <Text style={styles.actionText}>
-                                                {item.type === 'quiz' ? 'Take Quiz' : 'Read Chapter'}
-                                            </Text>
-                                            <MaterialCommunityIcons name="arrow-right" size={16} color={theme.colors.primary} />
-                                        </View>
-                                    </TouchableOpacity>
-                                </Surface>
-                            </Animated.View>
-                        ))
-                    )}
+                    <TouchableOpacity
+                        style={[styles.tabItem, activeTab === 'classwork' && styles.tabItemActive]}
+                        onPress={() => setActiveTab('classwork')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'classwork' && styles.tabTextActive]}>Classwork</Text>
+                    </TouchableOpacity>
 
-                    <View style={{ height: 100 }} />
-                </ScrollView>
+                    <TouchableOpacity
+                        style={[styles.tabItem, activeTab === 'people' && styles.tabItemActive]}
+                        onPress={() => setActiveTab('people')}
+                    >
+                        <Text style={[styles.tabText, activeTab === 'people' && styles.tabTextActive]}>People</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Main Content Area */}
+                <View style={styles.contentArea}>
+                    <View style={styles.centeredContent}>
+                        {activeTab === 'stream' && renderStreamTab()}
+                        {activeTab === 'classwork' && renderClassworkTab()}
+                        {activeTab === 'people' && renderPeopleTab()}
+                    </View>
+                </View>
             </View>
 
             {/* Chapter Viewer Modal */}
-            <Modal visible={!!selectedChapter} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSelectedChapter(null)}>
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <TouchableOpacity onPress={() => setSelectedChapter(null)} style={styles.closeButton}>
-                            <MaterialCommunityIcons name="close" size={24} color="#333" />
-                        </TouchableOpacity>
-                        <Text style={styles.modalTitle} numberOfLines={1}>{selectedChapter?.title}</Text>
-                        <View style={{ width: 40 }} />
+            <Modal visible={!!selectedChapter} animationType="fade" transparent={true} onRequestClose={() => setSelectedChapter(null)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalHeaderLeft}>
+                                <MaterialCommunityIcons name="book-open-variant" size={24} color="#1967d2" />
+                                <Text style={styles.modalTitle} numberOfLines={1}>{selectedChapter?.title}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setSelectedChapter(null)} style={styles.closeButton}>
+                                <MaterialCommunityIcons name="close" size={24} color="#5f6368" />
+                            </TouchableOpacity>
+                        </View>
+                        <NativeScrollView contentContainerStyle={styles.modalContent}>
+                            <Text style={styles.contentMeta}>
+                                {selectedChapter?.teacher} • {new Date(selectedChapter?.date || Date.now()).toLocaleDateString()}
+                            </Text>
+                            <View style={styles.divider} />
+                            <Text style={styles.contentText}>{selectedChapter?.fullContent || selectedChapter?.description}</Text>
+                        </NativeScrollView>
                     </View>
-                    <NativeScrollView contentContainerStyle={styles.modalContent}>
-                        <Text style={styles.contentTitle}>{selectedChapter?.title}</Text>
-                        <Text style={styles.contentMeta}>{selectedChapter?.subtitle} • By {selectedChapter?.teacher}</Text>
-                        <View style={styles.divider} />
-                        <Text style={styles.contentText}>{selectedChapter?.fullContent || selectedChapter?.description}</Text>
-                    </NativeScrollView>
                 </View>
             </Modal>
         </ScreenBackground>
@@ -232,300 +336,305 @@ const ClassroomScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#fff',
     },
-    header: {
-        paddingBottom: spacing.xl * 1.5,
-        paddingHorizontal: spacing.lg,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#fff',
     },
-    headerTop: {
+    navBar: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        backgroundColor: '#fff',
+    },
+    navButton: {
+        padding: 12,
+    },
+    navTitle: {
+        fontSize: 18,
+        color: '#3c4043',
+        fontWeight: '500',
+        marginLeft: 8,
+        maxWidth: 200,
+    },
+    tabHeader: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        elevation: 2,
+    },
+    tabItem: {
+        flex: 1,
         alignItems: 'center',
-        marginBottom: spacing.lg,
+        paddingVertical: 14,
+        borderBottomWidth: 3,
+        borderBottomColor: 'transparent',
     },
-    backButton: {
-        padding: spacing.xs,
+    tabItemActive: {
+        borderBottomColor: '#1967d2',
     },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
+    tabText: {
+        textTransform: 'uppercase',
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#5f6368',
     },
-    notificationButton: {
-        padding: spacing.xs,
+    tabTextActive: {
+        color: '#1967d2',
     },
-    welcomeParams: {
-        alignItems: 'center',
+    contentArea: {
+        flex: 1,
+        backgroundColor: '#fff',
     },
-    className: {
-        fontSize: 28,
+    centeredContent: {
+        flex: 1,
+        maxWidth: 900,
+        width: '100%',
+        alignSelf: 'center',
+    },
+    tabContent: {
+        flex: 1,
+        padding: spacing.md,
+    },
+
+    // STREAM STYLES
+    bannerContainer: {
+        height: 140,
+        borderRadius: 8,
+        overflow: 'hidden',
+        marginBottom: 24,
+        position: 'relative',
+        backgroundColor: '#1967d2', // Fallback
+    },
+    bannerImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    bannerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)', // Darker so text pops
+    },
+    bannerContent: {
+        position: 'absolute',
+        bottom: 16,
+        left: 16,
+        right: 16,
+    },
+    bannerTitle: {
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#fff',
         marginBottom: 4,
     },
-    schoolName: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
-    },
-    contentContainer: {
-        flex: 1,
-        marginTop: -40,
-        paddingHorizontal: spacing.lg,
-    },
-    liveSection: {
-        marginBottom: spacing.lg,
-    },
-    liveCard: {
-        padding: spacing.lg,
-        borderRadius: 20,
-        elevation: 5,
-        shadowColor: '#FF4B2B',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    liveBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginBottom: spacing.sm,
-    },
-    liveDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: '#fff',
-        marginRight: 6,
-    },
-    liveText: {
+    bannerSubtitle: {
+        fontSize: 14,
         color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 10,
+        fontWeight: '500',
     },
-    liveSubject: {
-        color: '#fff',
-        fontSize: 14,
-        opacity: 0.9,
-        marginBottom: 2,
+    bannerInfoBtn: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        padding: 8,
     },
-    liveTopic: {
-        color: '#fff',
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginTop: spacing.sm,
-        marginBottom: spacing.md,
-    },
-    joinButton: {
+    announcementBox: {
         backgroundColor: '#fff',
-        paddingVertical: 10,
-        borderRadius: 12,
-        alignItems: 'center',
-    },
-    joinButtonText: {
-        color: '#FF4B2B',
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
-    scrollContent: {
-        flex: 1,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginTop: spacing.md,
-        marginBottom: spacing.md,
-    },
-    teachersRow: {
-        marginBottom: spacing.md,
-    },
-    // Resource Styles
-    resourcesRow: {
-        flexDirection: 'row',
-        marginBottom: spacing.lg,
-        paddingHorizontal: spacing.xs,
-    },
-    resourceCard: {
-        flex: 1,
-        borderRadius: 16,
-        marginRight: spacing.md,
-        overflow: 'hidden',
-    },
-    resourceTouchable: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: spacing.md,
-    },
-    resourceIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: spacing.sm,
-    },
-    resourceTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-    },
-    teacherCard: {
-        backgroundColor: '#fff',
-        padding: spacing.md,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginRight: spacing.md,
-        width: 120,
-        elevation: 2,
-    },
-    teacherAvatar: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        marginBottom: spacing.sm,
-        backgroundColor: '#eee',
-    },
-    teacherName: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#333',
-        textAlign: 'center',
-    },
-    teacherSubject: {
-        fontSize: 12,
-        color: '#666',
-        textAlign: 'center',
-    },
-    announcementCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: spacing.lg,
-        marginBottom: spacing.md,
-        elevation: 2,
-    },
-    announcementHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: spacing.sm,
-    },
-    announcementAuthor: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    avatarPlaceholder: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: spacing.sm,
-    },
-    authorName: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    dateText: {
-        fontSize: 12,
-        color: '#999',
-    },
-    highPriorityBadge: {
-        backgroundColor: '#FFEBEE',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
         borderRadius: 8,
-    },
-    priorityText: {
-        fontSize: 10,
-        color: '#D32F2F',
-        fontWeight: 'bold',
-    },
-    announcementContent: {
-        fontSize: 14,
-        color: '#444',
-        lineHeight: 20,
-    },
-    streamCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: spacing.md,
-        marginBottom: spacing.md,
-        elevation: 2,
+        padding: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#dadce0',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.05,
     },
-    cardHeader: {
-        flexDirection: 'row',
-        marginBottom: spacing.sm,
+    tinyAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        marginRight: 12,
     },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
+    announcementPlaceholder: {
+        color: '#80868b',
+        fontSize: 13,
+    },
+    streamList: {
+        paddingBottom: 20,
+    },
+    emptyContainer: {
         alignItems: 'center',
-        marginRight: spacing.md,
-    },
-    cardInfo: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    cardTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 2,
-    },
-    cardSubtitle: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 2,
-    },
-    cardDate: {
-        fontSize: 10,
-        color: '#999',
-    },
-    cardDescription: {
-        fontSize: 14,
-        color: '#444',
-        lineHeight: 20,
-        marginBottom: spacing.md,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
-        paddingTop: spacing.sm,
-    },
-    actionText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: theme.colors.primary,
-    },
-    emptyState: {
-        padding: spacing.xl,
-        alignItems: 'center',
+        paddingVertical: 40,
     },
     emptyText: {
-        color: '#666',
-        fontSize: 16,
+        color: '#5f6368',
     },
-    // Modal Styles
-    modalContainer: {
-        flex: 1,
+    streamItem: {
         backgroundColor: '#fff',
+        borderRadius: 8,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#dadce0',
+    },
+    streamTouchable: {
+        flexDirection: 'row',
+        padding: 16,
+        alignItems: 'center',
+    },
+    streamIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    streamTextContent: {
+        flex: 1,
+    },
+    streamTitle: {
+        fontSize: 14,
+        color: '#3c4043',
+        fontWeight: '500',
+        lineHeight: 20,
+    },
+    streamDate: {
+        fontSize: 12,
+        color: '#5f6368',
+        marginTop: 2,
+    },
+    liveStreamCard: {
+        backgroundColor: '#fff',
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#d93025',
+        borderRadius: 8,
+        padding: 16,
+    },
+    liveHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    liveTitle: {
+        color: '#d93025',
+        fontWeight: 'bold',
+        marginLeft: 8,
+    },
+    liveBody: {
+        fontSize: 14,
+        color: '#3c4043',
+        marginBottom: 12,
+    },
+    joinBtn: {
+        backgroundColor: '#d93025',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 20,
+        paddingVertical: 6,
+        borderRadius: 4,
+    },
+    joinBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 13,
+    },
+
+    // CLASSWORK STYLES
+    topicSection: {
+        marginBottom: 32,
+    },
+    topicTitle: {
+        fontSize: 20,
+        color: '#1967d2',
+        marginBottom: 12,
+        paddingHorizontal: 8,
+    },
+    topicDivider: {
+        height: 1,
+        backgroundColor: '#1967d2',
+        marginBottom: 16,
+        marginHorizontal: 8,
+        width: 100, // Partial underline effect
+    },
+    classworkItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f1f3f4',
+    },
+    classworkIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    classworkInfo: {
+        flex: 1,
+    },
+    classworkTitle: {
+        fontSize: 14,
+        color: '#3c4043',
+        fontWeight: '500',
+    },
+    classworkSubtitle: {
+        fontSize: 12,
+        color: '#5f6368',
+        marginTop: 2,
+    },
+
+    // PEOPLE STYLES
+    peopleItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    peopleAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 16,
+    },
+    peopleInfo: {
+        flex: 1,
+    },
+    peopleName: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#3c4043',
+    },
+    peopleRole: {
+        fontSize: 12,
+        color: '#5f6368',
+    },
+
+    // MODAL
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+    },
+    modalContainer: {
+        backgroundColor: '#fff',
+        margin: spacing.lg,
+        borderRadius: 8,
+        maxHeight: '80%',
+        maxWidth: 800,
+        alignSelf: 'center',
+        width: '100%',
     },
     modalHeader: {
         flexDirection: 'row',
@@ -533,43 +642,38 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         padding: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        backgroundColor: '#fff',
+        borderBottomColor: '#dadce0',
+    },
+    modalHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
     },
     closeButton: {
-        padding: spacing.sm,
+        padding: 4,
     },
     modalTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-        textAlign: 'center',
+        fontWeight: '400',
+        color: '#3c4043',
+        marginLeft: 12,
     },
     modalContent: {
         padding: spacing.lg,
-        paddingBottom: 40,
-    },
-    contentTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: spacing.xs,
     },
     contentMeta: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: spacing.lg,
+        fontSize: 12,
+        color: '#5f6368',
+        marginBottom: spacing.md,
     },
     divider: {
         height: 1,
-        backgroundColor: '#eee',
-        marginBottom: spacing.lg,
+        backgroundColor: '#dadce0',
     },
     contentText: {
-        fontSize: 16,
-        color: '#333',
-        lineHeight: 24,
+        fontSize: 14,
+        color: '#3c4043',
+        lineHeight: 22,
     },
 });
 

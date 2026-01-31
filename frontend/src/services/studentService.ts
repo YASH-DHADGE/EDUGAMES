@@ -10,6 +10,7 @@ export interface ClassroomItem {
     teacher: string;
     date: string;
     icon: string;
+    status?: 'pending' | 'completed';
     questions?: any[];
 }
 
@@ -31,9 +32,23 @@ export interface ClassroomResponse {
     content: ClassroomItem[];
 }
 
-export const fetchClassroomContent = async (): Promise<ClassroomResponse> => {
+export interface ClassroomListItem {
+    id: string;
+    subject: string;
+    className: string;
+    teacher: string;
+    teacherAvatar: string;
+    itemCount: number;
+    startColor: string;
+}
+
+export const fetchClassroomContent = async (subject?: string): Promise<ClassroomResponse> => {
     try {
-        const response = await api.get('/student/classroom');
+        const url = subject
+            ? `/student/classroom?subject=${encodeURIComponent(subject)}`
+            : '/student/classroom';
+
+        const response = await api.get(url);
         // Handle backward compatibility if response is just an array
         if (Array.isArray(response.data)) {
             return {
@@ -44,6 +59,16 @@ export const fetchClassroomContent = async (): Promise<ClassroomResponse> => {
         return response.data;
     } catch (error) {
         console.error('Error fetching classroom content:', error);
+        throw error;
+    }
+};
+
+export const fetchClassroomsList = async (): Promise<ClassroomListItem[]> => {
+    try {
+        const response = await api.get('/student/classrooms-list');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching classrooms list:', error);
         throw error;
     }
 };

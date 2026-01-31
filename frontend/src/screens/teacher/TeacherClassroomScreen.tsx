@@ -1,30 +1,123 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, useWindowDimensions, Modal, Pressable } from 'react-native';
-import { Portal, Dialog, Button, Paragraph } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, Image, Modal, Pressable, TextInput as RNTextInput } from 'react-native';
+import { Portal, Dialog, Button, Paragraph, TextInput } from 'react-native-paper';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/ScreenBackground';
-import CompactHeader from '../../components/ui/CompactHeader';
 import { useAppTheme } from '../../context/ThemeContext';
-import { useResponsive } from '../../hooks/useResponsive';
 import api from '../../services/api';
+import { fetchClassroom, addStudentToClassroom, removeStudentFromClassroom } from '../../services/teacherService';
 
 const TeacherClassroomScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const { isDark } = useAppTheme();
-    const { isMobile, containerStyle } = useResponsive();
+    const { params } = useRoute<any>();
+    const classroom = params?.classroom;
 
+    // State
+    const [activeTab, setActiveTab] = useState<'stream' | 'classwork' | 'people'>('stream');
     const [content, setContent] = useState<any[]>([]);
+    const [students, setStudents] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [showCreateModal, setShowCreateModal] = useState(false);
 
-    // Delete Dialog State
+    // Modals
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showAddStudentModal, setShowAddStudentModal] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+    // Forms
+    const [newStudentEmail, setNewStudentEmail] = useState('');
+    const [addingStudent, setAddingStudent] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<any>(null);
+    const [announcement, setAnnouncement] = useState('');
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const loadData = async () => {
+        setLoading(true);
+        await Promise.all([fetchContent(), loadClassroomDetails()]);
+        setLoading(false);
+    };
+
+    const loadClassroomDetails = async () => {
+        if (classroom?._id) {
+            try {
+                const data = await fetchClassroom(classroom._id);
+                if (data.students) {
+                    setStudents(data.students);
+                }
+            } catch (error) {
+                console.error('Failed to load classroom details', error);
+            }
+        }
+    };
+
+    const fetchContent = async () => {
+        try {
+            const response = await api.get('/teacher/content');
+            let data = response.data;
+            if (data.quizzes || data.chapters) {
+                const formatted = [
+                    ...(data.quizzes || []).map((q: any) => ({ ...q, type: 'quiz' })),
+                    ...(data.chapters || []).map((c: any) => ({ ...c, type: 'chapter' }))
+                ];
+                setContent(formatted);
+            }
+        } catch (error) {
+            console.error('Error fetching content:', error);
+        }
+    };
+
+    const handleAddStudent = async () => {
+        if (!newStudentEmail.trim() || !classroom?._id) {
+            Alert.alert('Error', 'Please enter a valid email');
+            return;
+        }
+
+        setAddingStudent(true);
+        try {
+            await addStudentToClassroom(classroom._id, newStudentEmail.trim());
+            Alert.alert('Success', 'Student added successfully');
+            setNewStudentEmail('');
+            setShowAddStudentModal(false);
+            await loadClassroomDetails();
+        } catch (error: any) {
+            Alert.alert('Error', error?.response?.data?.message || 'Failed to add student');
+        } finally {
+            setAddingStudent(false);
+        }
+    };
+
+    const handleRemoveStudent = (studentId: string) => {
+        Alert.alert(
+            'Remove Student',
+            'Are you sure you want to remove this student from the classroom?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            if (classroom?._id) {
+                                await removeStudentFromClassroom(classroom._id, studentId);
+                                await loadClassroomDetails();
+                                Alert.alert('Success', 'Student removed successfully');
+                            }
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to remove student');
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const handleDeletePress = (item: any) => {
         setItemToDelete(item);
@@ -40,7 +133,6 @@ const TeacherClassroomScreen = () => {
             } else {
                 await api.delete(`/teacher/chapter/${itemToDelete._id}`);
             }
-            // Refresh content
             await fetchContent();
         } catch (error) {
             console.error('Delete error:', error);
@@ -51,337 +143,317 @@ const TeacherClassroomScreen = () => {
         }
     };
 
-    useEffect(() => {
-        fetchContent();
-    }, []);
-
-    const fetchContent = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get('/teacher/content');
-            setContent(response.data);
-        } catch (error) {
-            console.error('Failed to fetch content', error);
-            Alert.alert('Error', 'Failed to load content');
-        } finally {
-            setLoading(false);
+    const handleCreateContent = (type: 'quiz' | 'chapter') => {
+        setShowCreateModal(false);
+        if (type === 'quiz') {
+            (navigation as any).navigate('TeacherQuizCreator');
+        } else {
+            (navigation as any).navigate('TeacherContentManager');
         }
     };
 
-    const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchContent();
-        setRefreshing(false);
-    };
+    const renderHeader = () => (
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+                <MaterialCommunityIcons name="arrow-left" size={24} color="#5f6368" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle} numberOfLines={1}>{classroom?.title || 'Social'}</Text>
+            <TouchableOpacity style={styles.headerButton}>
+                <MaterialCommunityIcons name="dots-vertical" size={24} color="#5f6368" />
+            </TouchableOpacity>
+        </View>
+    );
 
-    const getTypeGradient = (type: string): [string, string] => {
-        return type === 'quiz' ? ['#EC4899', '#F472B6'] : ['#059669', '#34D399'];
-    };
+    const renderBanner = () => (
+        <View style={styles.bannerContainer}>
+            <LinearGradient
+                colors={classroom?.gradient || ['#10B981', '#059669']}
+                style={styles.bannerGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&h=300&fit=crop' }}
+                    style={styles.bannerImage}
+                    resizeMode="cover"
+                />
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.4)', 'rgba(0,0,0,0.7)']}
+                    style={styles.bannerOverlay}
+                >
+                    <View style={styles.bannerContent}>
+                        <Text style={styles.bannerTitle}>{classroom?.title || 'Social'}</Text>
+                        <Text style={styles.bannerSubtitle}>
+                            {classroom?.section
+                                ? `${classroom.classNumber}${classroom.section}`
+                                : `Class ${classroom?.classNumber || ''}`}
+                        </Text>
+                    </View>
+                    <TouchableOpacity style={styles.bannerInfoButton}>
+                        <MaterialCommunityIcons name="information-outline" size={28} color="#fff" />
+                    </TouchableOpacity>
+                </LinearGradient>
+            </LinearGradient>
+        </View>
+    );
+
+    const renderTabs = () => (
+        <View style={styles.tabsContainer}>
+            <TouchableOpacity
+                style={[styles.tab, activeTab === 'stream' && styles.activeTab]}
+                onPress={() => setActiveTab('stream')}
+            >
+                <Text style={[styles.tabText, activeTab === 'stream' && styles.activeTabText]}>
+                    STREAM
+                </Text>
+                {activeTab === 'stream' && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.tab, activeTab === 'classwork' && styles.activeTab]}
+                onPress={() => setActiveTab('classwork')}
+            >
+                <Text style={[styles.tabText, activeTab === 'classwork' && styles.activeTabText]}>
+                    CLASSWORK
+                </Text>
+                {activeTab === 'classwork' && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.tab, activeTab === 'people' && styles.activeTab]}
+                onPress={() => setActiveTab('people')}
+            >
+                <Text style={[styles.tabText, activeTab === 'people' && styles.activeTabText]}>
+                    PEOPLE
+                </Text>
+                {activeTab === 'people' && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+        </View>
+    );
+
+    const renderStreamTab = () => (
+        <ScrollView style={styles.tabContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}>
+            {/* Announcement Input */}
+            <View style={styles.announcementCard}>
+                <View style={styles.announcementInputRow}>
+                    <View style={styles.avatarCircle}>
+                        <Text style={styles.avatarText}>T</Text>
+                    </View>
+                    <TouchableOpacity style={styles.announcementInput}>
+                        <Text style={styles.announcementPlaceholder}>Share with your class...</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Sample Post */}
+            <View style={styles.postCard}>
+                <View style={styles.postHeader}>
+                    <View style={styles.postIcon}>
+                        <MaterialCommunityIcons name="file-document-outline" size={24} color="#1967D2" />
+                    </View>
+                    <View style={styles.postInfo}>
+                        <Text style={styles.postAuthor}>Teacher posted a new assignment: HTML Hard Quiz</Text>
+                        <Text style={styles.postDate}>31/1/2026</Text>
+                    </View>
+                    <MaterialCommunityIcons name="check" size={20} color="#1E8E3E" />
+                </View>
+            </View>
+
+            <View style={styles.emptyState}>
+                <MaterialCommunityIcons name="forum-outline" size={64} color="#DADCE0" />
+                <Text style={styles.emptyText}>This is where you'll see posts</Text>
+                <Text style={styles.emptySubtext}>from teachers and classmates</Text>
+            </View>
+        </ScrollView>
+    );
+
+    const renderClassworkTab = () => (
+        <ScrollView style={styles.tabContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}>
+            {loading ? (
+                <ActivityIndicator size="large" color="#1967D2" style={{ marginTop: 40 }} />
+            ) : content.length === 0 ? (
+                <View style={styles.emptyState}>
+                    <MaterialCommunityIcons name="book-open-page-variant-outline" size={64} color="#DADCE0" />
+                    <Text style={styles.emptyText}>No classwork yet</Text>
+                    <Button mode="contained" onPress={() => setShowCreateModal(true)} style={{ marginTop: 16 }}>
+                        Create Assignment
+                    </Button>
+                </View>
+            ) : (
+                <View style={styles.contentList}>
+                    {content.map((item) => (
+                        <View key={item._id} style={styles.contentCard}>
+                            <View style={styles.contentIcon}>
+                                <MaterialCommunityIcons
+                                    name={item.type === 'quiz' ? 'file-document-edit-outline' : 'book-open-variant'}
+                                    size={24}
+                                    color="#1967D2"
+                                />
+                            </View>
+                            <View style={styles.contentInfo}>
+                                <Text style={styles.contentTitle}>{item.title}</Text>
+                                <Text style={styles.contentMeta}>
+                                    {item.type === 'quiz' ? `${item.questions?.length || 0} questions` : item.subject}
+                                </Text>
+                            </View>
+                            <View style={styles.contentActions}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        if (item.type === 'quiz') {
+                                            (navigation as any).navigate('Quiz', { quizId: item._id });
+                                        } else {
+                                            (navigation as any).navigate('TeacherChapterViewer', { chapter: item });
+                                        }
+                                    }}
+                                    style={styles.actionButton}
+                                >
+                                    <MaterialCommunityIcons name="eye-outline" size={20} color="#5f6368" />
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => handleDeletePress(item)} style={styles.actionButton}>
+                                    <MaterialCommunityIcons name="delete-outline" size={20} color="#EA4335" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            )}
+
+            {/* FAB for Creating Content */}
+            {!loading && (
+                <TouchableOpacity style={styles.fab} onPress={() => setShowCreateModal(true)}>
+                    <MaterialCommunityIcons name="plus" size={24} color="#fff" />
+                </TouchableOpacity>
+            )}
+        </ScrollView>
+    );
+
+    const renderPeopleTab = () => (
+        <ScrollView style={styles.tabContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={loadData} />}>
+            {/* Teachers Section */}
+            <View style={styles.peopleSection}>
+                <View style={styles.peopleSectionHeader}>
+                    <Text style={styles.peopleSectionTitle}>Teachers</Text>
+                </View>
+                <View style={styles.personCard}>
+                    <View style={styles.personAvatar}>
+                        <Text style={styles.personAvatarText}>T</Text>
+                    </View>
+                    <Text style={styles.personName}>Teacher</Text>
+                </View>
+            </View>
+
+            {/* Students Section */}
+            <View style={styles.peopleSection}>
+                <View style={styles.peopleSectionHeader}>
+                    <Text style={styles.peopleSectionTitle}>Students</Text>
+                    <Text style={styles.peopleCount}>{students.length}</Text>
+                </View>
+
+                {students.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <MaterialCommunityIcons name="account-group-outline" size={64} color="#DADCE0" />
+                        <Text style={styles.emptyText}>No students yet</Text>
+                        <Button mode="contained" onPress={() => setShowAddStudentModal(true)} style={{ marginTop: 16 }}>
+                            Add Student
+                        </Button>
+                    </View>
+                ) : (
+                    students.map((student) => (
+                        <View key={student._id} style={styles.personCard}>
+                            <View style={styles.personAvatar}>
+                                <Text style={styles.personAvatarText}>
+                                    {student.name?.charAt(0).toUpperCase() || 'S'}
+                                </Text>
+                            </View>
+                            <View style={styles.personInfo}>
+                                <Text style={styles.personName}>{student.name}</Text>
+                                <Text style={styles.personEmail}>{student.email}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => handleRemoveStudent(student._id)}>
+                                <MaterialCommunityIcons name="account-remove-outline" size={20} color="#EA4335" />
+                            </TouchableOpacity>
+                        </View>
+                    ))
+                )}
+            </View>
+
+            {/* FAB for Adding Students */}
+            {students.length > 0 && (
+                <TouchableOpacity style={styles.fab} onPress={() => setShowAddStudentModal(true)}>
+                    <MaterialCommunityIcons name="account-plus" size={24} color="#fff" />
+                </TouchableOpacity>
+            )}
+        </ScrollView>
+    );
+
+    if (!classroom) {
+        return (
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Classroom not found</Text>
+            </View>
+        );
+    }
 
     return (
         <ScreenBackground style={styles.container}>
-            {/* Compact Header */}
-            <CompactHeader
-                title="Classroom Preview"
-                subtitle="Your created content"
-                onBack={() => navigation.goBack()}
-                rightComponent={
-                    <TouchableOpacity
-                        style={{ width: 40, height: 40, backgroundColor: '#fff', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}
-                        onPress={() => setShowCreateModal(true)}
-                    >
-                        <MaterialCommunityIcons name="plus" size={24} color="#4F46E5" />
-                    </TouchableOpacity>
-                }
-            />
+            {renderHeader()}
+            {renderBanner()}
+            {renderTabs()}
 
-            {loading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#6200EA" />
-                </View>
-            ) : (
-                <ScrollView
-                    contentContainerStyle={[styles.scrollContent, containerStyle]}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6200EA" />
-                    }
-                    showsVerticalScrollIndicator={false}
-                >
-                    {content.length > 0 ? (
-                        <>
-                            <View style={styles.statsRow}>
-                                <View style={[styles.statCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
-                                    <MaterialCommunityIcons name="clipboard-text" size={24} color="#EC4899" />
-                                    <Text style={[styles.statValue, { color: isDark ? '#fff' : '#333' }]}>{content.filter(c => c.type === 'quiz').length}</Text>
-                                    <Text style={[styles.statLabel, { color: isDark ? '#ccc' : '#666' }]}>Quizzes</Text>
-                                </View>
-                                <View style={[styles.statCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
-                                    <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#059669" />
-                                    <Text style={[styles.statValue, { color: isDark ? '#fff' : '#333' }]}>{content.filter(c => c.type === 'chapter').length}</Text>
-                                    <Text style={[styles.statLabel, { color: isDark ? '#ccc' : '#666' }]}>Chapters</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.contentList}>
-                                {content.map((item, index) => (
-                                    <View key={index} style={[styles.contentCard, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}>
-                                        {/* Type Badge */}
-                                        <LinearGradient
-                                            colors={getTypeGradient(item.type)}
-                                            style={styles.typeStripe}
-                                        />
-
-                                        <View style={styles.cardContent}>
-                                            <View style={styles.cardHeader}>
-                                                <View style={[styles.iconContainer, {
-                                                    backgroundColor: item.type === 'quiz' ? 'rgba(236, 72, 153, 0.1)' : 'rgba(5, 150, 105, 0.1)'
-                                                }]}>
-                                                    <MaterialCommunityIcons
-                                                        name={item.type === 'quiz' ? 'clipboard-text' : 'book-open-page-variant'}
-                                                        size={24}
-                                                        color={item.type === 'quiz' ? '#EC4899' : '#059669'}
-                                                    />
-                                                </View>
-                                                <View style={styles.cardInfo}>
-                                                    <Text style={[styles.cardTitle, { color: isDark ? '#fff' : '#333' }]}>{item.title}</Text>
-                                                    <Text style={[styles.cardSubtitle, { color: isDark ? '#aaa' : '#666' }]}>
-                                                        {item.subject} • Class {item.classNumber}
-                                                    </Text>
-                                                </View>
-                                            </View>
-
-                                            <View style={styles.metadata}>
-                                                <View style={styles.metaItem}>
-                                                    <MaterialCommunityIcons name="calendar" size={14} color={isDark ? '#aaa' : '#999'} />
-                                                    <Text style={[styles.metaText, { color: isDark ? '#aaa' : '#999' }]}>
-                                                        {new Date(item.createdAt).toLocaleDateString()}
-                                                    </Text>
-                                                </View>
-                                                <LinearGradient
-                                                    colors={getTypeGradient(item.type)}
-                                                    style={styles.typeBadge}
-                                                >
-                                                    <Text style={styles.typeBadgeText}>
-                                                        {item.type === 'quiz' ? 'Quiz' : 'Chapter'}
-                                                    </Text>
-                                                </LinearGradient>
-                                            </View>
-
-                                            {/* Actions */}
-                                            <View style={styles.actionRow}>
-                                                <TouchableOpacity
-                                                    style={[styles.actionButton, styles.previewButton]}
-                                                    onPress={() => {
-                                                        if (item.type === 'quiz') {
-                                                            (navigation as any).navigate('Quiz', { quizData: item, previewMode: true });
-                                                        } else {
-                                                            (navigation as any).navigate('TeacherChapterViewer', { chapter: item });
-                                                        }
-                                                    }}
-                                                >
-                                                    <MaterialCommunityIcons name="eye" size={18} color="#fff" />
-                                                    <Text style={styles.actionButtonText}>
-                                                        {item.type === 'quiz' ? 'Preview' : 'Read'}
-                                                    </Text>
-                                                </TouchableOpacity>
-
-                                                {item.type === 'quiz' && (
-                                                    <TouchableOpacity
-                                                        style={[styles.actionButton, styles.editButton]}
-                                                        onPress={() => (navigation as any).navigate('TeacherQuizCreator', { quizToEdit: item })}
-                                                    >
-                                                        <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
-                                                    </TouchableOpacity>
-                                                )}
-
-                                                <TouchableOpacity
-                                                    style={[styles.actionButton, styles.deleteButton]}
-                                                    onPress={() => handleDeletePress(item)}
-                                                >
-                                                    <MaterialCommunityIcons name="delete" size={18} color="#fff" />
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        </>
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <LinearGradient
-                                colors={['rgba(98, 0, 234, 0.1)', 'rgba(124, 77, 255, 0.1)']}
-                                style={styles.emptyIconContainer}
-                            >
-                                <MaterialCommunityIcons name="notebook-check-outline" size={64} color="#6200EA" />
-                            </LinearGradient>
-                            <Text style={[styles.emptyTitle, { color: isDark ? '#fff' : '#333' }]}>No content yet!</Text>
-                            <Text style={[styles.emptyText, { color: isDark ? '#ccc' : '#666' }]}>
-                                Create engaging quizzes and chapters for your students to learn from.
-                            </Text>
-
-                            {/* CTA Buttons */}
-                            <View style={styles.ctaButtons}>
-                                <TouchableOpacity
-                                    style={styles.ctaButton}
-                                    onPress={() => (navigation as any).navigate('TeacherQuizCreator')}
-                                >
-                                    <LinearGradient
-                                        colors={['#EC4899', '#F472B6']}
-                                        style={styles.ctaGradient}
-                                    >
-                                        <MaterialCommunityIcons name="clipboard-text" size={20} color="#fff" />
-                                        <Text style={styles.ctaText}>Create Quiz</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.ctaButton}
-                                    onPress={() => (navigation as any).navigate('TeacherContentManager')}
-                                >
-                                    <LinearGradient
-                                        colors={['#059669', '#34D399']}
-                                        style={styles.ctaGradient}
-                                    >
-                                        <MaterialCommunityIcons name="book-open-page-variant" size={20} color="#fff" />
-                                        <Text style={styles.ctaText}>Create Chapter</Text>
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    )}
-                </ScrollView>
-            )}
+            {activeTab === 'stream' && renderStreamTab()}
+            {activeTab === 'classwork' && renderClassworkTab()}
+            {activeTab === 'people' && renderPeopleTab()}
 
             {/* Create Content Modal */}
-            <Modal
-                visible={showCreateModal}
-                transparent={true}
-                animationType="fade"
-                onRequestClose={() => setShowCreateModal(false)}
-            >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setShowCreateModal(false)}
-                >
-                    <Pressable
-                        style={[styles.modalContent, { backgroundColor: isDark ? '#1E293B' : '#fff' }]}
-                        onPress={e => e.stopPropagation()}
-                    >
-                        <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#1E293B' }]}>
-                            Create Content
-                        </Text>
-                        <Text style={[styles.modalSubtitle, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                            What would you like to create today?
-                        </Text>
-
-                        <View style={styles.modalOptions}>
-                            <TouchableOpacity
-                                style={[styles.modalOption, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}
-                                onPress={() => {
-                                    setShowCreateModal(false);
-                                    (navigation as any).navigate('TeacherQuizCreator');
-                                }}
-                            >
-                                <View style={[styles.optionIcon, { backgroundColor: '#EC489915' }]}>
-                                    <MaterialCommunityIcons name="clipboard-text" size={24} color="#EC4899" />
-                                </View>
-                                <View style={styles.optionText}>
-                                    <Text style={[styles.optionTitle, { color: isDark ? '#fff' : '#1E293B' }]}>New Quiz</Text>
-                                    <Text style={[styles.optionDesc, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                                        Create an interactive quiz
-                                    </Text>
-                                </View>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#94A3B8' : '#CBD5E1'} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.modalOption, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}
-                                onPress={() => {
-                                    setShowCreateModal(false);
-                                    (navigation as any).navigate('TeacherContentManager');
-                                }}
-                            >
-                                <View style={[styles.optionIcon, { backgroundColor: '#05966915' }]}>
-                                    <MaterialCommunityIcons name="book-open-page-variant" size={24} color="#059669" />
-                                </View>
-                                <View style={styles.optionText}>
-                                    <Text style={[styles.optionTitle, { color: isDark ? '#fff' : '#1E293B' }]}>New Chapter</Text>
-                                    <Text style={[styles.optionDesc, { color: isDark ? '#94A3B8' : '#64748B' }]}>
-                                        Add reading material or notes
-                                    </Text>
-                                </View>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? '#94A3B8' : '#CBD5E1'} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() => setShowCreateModal(false)}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Modal visible={showCreateModal} transparent animationType="fade" onRequestClose={() => setShowCreateModal(false)}>
+                <Pressable style={styles.modalOverlay} onPress={() => setShowCreateModal(false)}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Create Content</Text>
+                        <TouchableOpacity style={styles.modalOption} onPress={() => handleCreateContent('quiz')}>
+                            <MaterialCommunityIcons name="file-document-edit" size={24} color="#1967D2" />
+                            <Text style={styles.modalOptionText}>Quiz Assignment</Text>
                         </TouchableOpacity>
-                    </Pressable>
+                        <TouchableOpacity style={styles.modalOption} onPress={() => handleCreateContent('chapter')}>
+                            <MaterialCommunityIcons name="book-open-variant" size={24} color="#1967D2" />
+                            <Text style={styles.modalOptionText}>Chapter/Material</Text>
+                        </TouchableOpacity>
+                        <Button mode="text" onPress={() => setShowCreateModal(false)}>Cancel</Button>
+                    </View>
                 </Pressable>
             </Modal>
-            {/* Delete Confirmation Dialog */}
-            <Portal>
-                <Dialog
-                    visible={showDeleteDialog}
-                    onDismiss={() => setShowDeleteDialog(false)}
-                    style={{
-                        backgroundColor: isDark ? '#1E293B' : '#fff',
-                        borderRadius: 16,
-                        maxWidth: 400,
-                        width: '90%',
-                        alignSelf: 'center'
-                    }}
-                >
-                    <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                        <View style={{
-                            width: 64,
-                            height: 64,
-                            borderRadius: 16,
-                            backgroundColor: isDark ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            marginBottom: 16
-                        }}>
-                            <MaterialCommunityIcons name="delete-outline" size={32} color="#EF4444" />
-                        </View>
-                        <Text style={{
-                            fontSize: 20,
-                            fontWeight: 'bold',
-                            color: isDark ? '#fff' : '#1E293B',
-                            marginBottom: 8
-                        }}>
-                            Delete Content?
-                        </Text>
-                        <Text style={{
-                            fontSize: 14,
-                            color: isDark ? '#94A3B8' : '#64748B',
-                            textAlign: 'center',
-                            paddingHorizontal: 24
-                        }}>
-                            Are you sure you want to delete "{itemToDelete?.title}"? This action cannot be undone.
-                        </Text>
-                    </View>
-                    <Dialog.Actions style={{ paddingHorizontal: 24, paddingBottom: 24, justifyContent: 'space-between' }}>
-                        <Button
+
+            {/* Add Student Modal */}
+            <Modal visible={showAddStudentModal} transparent animationType="slide" onRequestClose={() => setShowAddStudentModal(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Add Student</Text>
+                        <TextInput
                             mode="outlined"
-                            onPress={() => setShowDeleteDialog(false)}
-                            style={{ flex: 1, marginRight: 8, borderRadius: 8, borderColor: isDark ? '#475569' : '#E2E8F0' }}
-                            textColor={isDark ? '#CBD5E1' : '#64748B'}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            mode="contained"
-                            onPress={confirmDelete}
-                            style={{ flex: 1, marginLeft: 8, borderRadius: 8, backgroundColor: '#EF4444' }}
-                            textColor="#fff"
-                        >
-                            Delete
-                        </Button>
+                            label="Student Email"
+                            value={newStudentEmail}
+                            onChangeText={setNewStudentEmail}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            style={{ marginBottom: 16 }}
+                        />
+                        <View style={styles.modalButtons}>
+                            <Button mode="text" onPress={() => setShowAddStudentModal(false)}>Cancel</Button>
+                            <Button mode="contained" onPress={handleAddStudent} loading={addingStudent}>
+                                Add
+                            </Button>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Delete Dialog */}
+            <Portal>
+                <Dialog visible={showDeleteDialog} onDismiss={() => setShowDeleteDialog(false)}>
+                    <Dialog.Title>Delete Content</Dialog.Title>
+                    <Dialog.Content>
+                        <Paragraph>Are you sure you want to delete "{itemToDelete?.title}"?</Paragraph>
+                    </Dialog.Content>
+                    <Dialog.Actions>
+                        <Button onPress={() => setShowDeleteDialog(false)}>Cancel</Button>
+                        <Button onPress={confirmDelete} textColor="#EA4335">Delete</Button>
                     </Dialog.Actions>
                 </Dialog>
             </Portal>
@@ -392,222 +464,302 @@ const TeacherClassroomScreen = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#F5F5F5',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#5f6368',
     },
     header: {
-        paddingBottom: 24,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        elevation: 8,
-        shadowColor: '#4F46E5',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    headerTop: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        paddingHorizontal: 8,
+        paddingBottom: 8,
+        backgroundColor: '#fff',
     },
-    backButton: {
+    headerButton: {
         padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 12,
-    },
-    headerContent: {
-        flex: 1,
-        marginLeft: 16,
     },
     headerTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
+        flex: 1,
+        fontSize: 20,
+        fontWeight: '500',
+        color: '#202124',
+        marginHorizontal: 16,
+    },
+    bannerContainer: {
+        height: 200,
+        overflow: 'hidden',
+    },
+    bannerGradient: {
+        flex: 1,
+    },
+    bannerImage: {
+        ...StyleSheet.absoluteFillObject,
+        opacity: 0.3,
+    },
+    bannerOverlay: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        padding: 24,
+    },
+    bannerContent: {
+        flex: 1,
+    },
+    bannerTitle: {
+        fontSize: 32,
+        fontWeight: '500',
         color: '#fff',
+        marginBottom: 4,
     },
-    headerSubtitle: {
-        fontSize: 13,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 2,
+    bannerSubtitle: {
+        fontSize: 16,
+        color: '#fff',
+        opacity: 0.9,
     },
-    addButton: {
+    bannerInfoButton: {
+        padding: 8,
+    },
+    tabsContainer: {
+        flexDirection: 'row',
         backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DADCE0',
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 14,
+        alignItems: 'center',
+        position: 'relative',
+    },
+    activeTab: {},
+    tabText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#5f6368',
+        letterSpacing: 0.5,
+    },
+    activeTabText: {
+        color: '#1967D2',
+    },
+    tabIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        height: 3,
+        width: '60%',
+        backgroundColor: '#1967D2',
+        borderRadius: 2,
+    },
+    tabContent: {
+        flex: 1,
+    },
+    announcementCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        marginBottom: 8,
+    },
+    announcementInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatarCircle: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    scrollContent: {
-        padding: 20,
-        paddingTop: 10,
-    },
-    statsRow: {
-        flexDirection: 'row',
-        gap: 12,
-        marginBottom: 20,
-    },
-    statCard: {
-        flex: 1,
-        backgroundColor: '#fff',
-        padding: 16,
-        borderRadius: 16,
-        alignItems: 'center',
-        elevation: 2,
-    },
-    statValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginTop: 8,
-    },
-    statLabel: {
-        fontSize: 12,
-        marginTop: 4,
-    },
-    contentList: {
-        gap: 16,
-    },
-    contentCard: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
-    typeStripe: {
-        height: 4,
-    },
-    cardContent: {
-        padding: 16,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
+        backgroundColor: '#0EA5E9',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
-    cardInfo: {
+    avatarText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    announcementInput: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 24,
+        backgroundColor: '#F1F3F4',
+    },
+    announcementPlaceholder: {
+        color: '#5f6368',
+        fontSize: 14,
+    },
+    postCard: {
+        backgroundColor: '#fff',
+        padding: 16,
+        marginBottom: 8,
+        borderRadius: 8,
+        marginHorizontal: 16,
+    },
+    postHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    postIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E8F0FE',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    postInfo: {
         flex: 1,
     },
-    cardTitle: {
+    postAuthor: {
+        fontSize: 14,
+        color: '#202124',
+        marginBottom: 2,
+    },
+    postDate: {
+        fontSize: 12,
+        color: '#5f6368',
+    },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 60,
+    },
+    emptyText: {
         fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 4,
+        color: '#5f6368',
+        marginTop: 16,
     },
-    cardSubtitle: {
-        fontSize: 12,
+    emptySubtext: {
+        fontSize: 14,
+        color: '#80868B',
+        marginTop: 4,
     },
-    metadata: {
+    contentList: {
+        padding: 16,
+    },
+    contentCard: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 16,
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 12,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
-    metaItem: {
-        flexDirection: 'row',
+    contentIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E8F0FE',
+        justifyContent: 'center',
         alignItems: 'center',
-        gap: 4,
+        marginRight: 12,
     },
-    metaText: {
-        fontSize: 12,
+    contentInfo: {
+        flex: 1,
     },
-    typeBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
+    contentTitle: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#202124',
+        marginBottom: 2,
     },
-    typeBadgeText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#fff',
+    contentMeta: {
+        fontSize: 13,
+        color: '#5f6368',
     },
-    actionRow: {
+    contentActions: {
         flexDirection: 'row',
         gap: 8,
     },
     actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 10,
-        borderRadius: 8,
-        gap: 4,
+        padding: 8,
     },
-    previewButton: {
-        backgroundColor: '#4F46E5',
-        flex: 1,
-    },
-    editButton: {
-        backgroundColor: '#3B82F6',
-        paddingHorizontal: 12,
-    },
-    deleteButton: {
-        backgroundColor: '#EF4444',
-        paddingHorizontal: 12,
-    },
-    actionButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: 60,
-        paddingHorizontal: 20,
-    },
-    emptyIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        justifyContent: 'center',
-        alignItems: 'center',
+    peopleSection: {
         marginBottom: 24,
     },
-    emptyTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 12,
-    },
-    emptyText: {
-        fontSize: 14,
-        textAlign: 'center',
-        lineHeight: 22,
-        marginBottom: 32,
-    },
-    ctaButtons: {
-        flexDirection: 'row',
-        gap: 12,
-        width: '100%',
-    },
-    ctaButton: {
-        flex: 1,
-        borderRadius: 12,
-        overflow: 'hidden',
-        elevation: 4,
-    },
-    ctaGradient: {
+    peopleSectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        gap: 8,
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DADCE0',
     },
-    ctaText: {
-        color: '#fff',
+    peopleSectionTitle: {
         fontSize: 14,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: '#202124',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    peopleCount: {
+        fontSize: 13,
+        color: '#5f6368',
+    },
+    personCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F3F4',
+    },
+    personAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#34A853',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    personAvatarText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    personInfo: {
+        flex: 1,
+    },
+    personName: {
+        fontSize: 15,
+        fontWeight: '500',
+        color: '#202124',
+    },
+    personEmail: {
+        fontSize: 13,
+        color: '#5f6368',
+        marginTop: 2,
+    },
+    fab: {
+        position: 'absolute',
+        right: 16,
+        bottom: 16,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#1967D2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
     modalOverlay: {
         flex: 1,
@@ -619,64 +771,34 @@ const styles = StyleSheet.create({
     modalContent: {
         width: '100%',
         maxWidth: 400,
-        borderRadius: 24,
+        backgroundColor: '#fff',
+        borderRadius: 16,
         padding: 24,
         elevation: 5,
-        shadowColor: 'black',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
     },
     modalTitle: {
         fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        marginBottom: 24,
-        textAlign: 'center',
-    },
-    modalOptions: {
-        gap: 12,
-        marginBottom: 24,
+        fontWeight: '600',
+        color: '#202124',
+        marginBottom: 20,
     },
     modalOption: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'transparent',
+        borderRadius: 8,
+        marginBottom: 12,
+        backgroundColor: '#F8F9FA',
     },
-    optionIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    optionText: {
-        flex: 1,
-    },
-    optionTitle: {
+    modalOptionText: {
         fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 2,
+        color: '#202124',
+        marginLeft: 16,
     },
-    optionDesc: {
-        fontSize: 12,
-    },
-    cancelButton: {
-        paddingVertical: 12,
-        alignItems: 'center',
-    },
-    cancelButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#64748B',
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 8,
     },
 });
 

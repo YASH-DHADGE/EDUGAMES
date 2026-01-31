@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getTeacherStats, createQuiz, assignQuiz, assignChapter, createChapter, assignCustomChapter, getMyContent, getStudents, createStudent, deleteQuiz, updateQuiz, deleteChapter, getAllChapters, getStudentsByClass, deleteStudent, updateStudent } = require('../controllers/teacherController');
+const { getTeacherStats, createQuiz, assignQuiz, assignChapter, createChapter, assignCustomChapter, getMyContent, getStudents, createStudent, deleteQuiz, updateQuiz, deleteChapter, getAllChapters, getStudentsByClass, deleteStudent, updateStudent, createClassroom, getMyClassrooms, deleteClassroom, addStudentToClassroom, removeStudentFromClassroom, getClassroom } = require('../controllers/teacherController');
 const { protect, teacherOnly } = require('../middleware/auth');
 
 router.get('/stats', protect, teacherOnly, getTeacherStats);
@@ -18,6 +18,12 @@ router.post('/assign-quiz', protect, teacherOnly, assignQuiz);
 router.post('/assign-chapter', protect, teacherOnly, assignChapter);
 router.post('/chapter', protect, teacherOnly, createChapter);
 router.post('/assign-custom-chapter', protect, teacherOnly, assignCustomChapter);
+router.post('/classroom', protect, teacherOnly, createClassroom);
+router.post('/classroom/add-student', protect, teacherOnly, addStudentToClassroom);
+router.delete('/classroom/:classroomId/student/:studentId', protect, teacherOnly, removeStudentFromClassroom);
+router.get('/classrooms', protect, teacherOnly, getMyClassrooms);
+router.get('/classroom/:id', protect, teacherOnly, getClassroom);
+router.delete('/classroom/:id', protect, teacherOnly, deleteClassroom); // Add delete
 router.delete('/chapter/:id', protect, teacherOnly, deleteChapter);
 
 module.exports = router;

@@ -161,7 +161,7 @@ const HomeScreen = ({ navigation }: any) => {
         { id: 'leaderboard', label: 'Ranks', icon: 'podium', gradient: ['#F59E0B', '#D97706'], route: 'Leaderboard', colSpan: 3, height: 100 },
         { id: 'rewards', label: 'Rewards', icon: 'trophy', gradient: ['#FBBF24', '#F59E0B'], route: 'Rewards', colSpan: 3, height: 100 },
         { id: 'ai', label: 'AI Tutor', icon: 'robot', gradient: ['#2DD4BF', '#0D9488'], route: 'Chatbot', colSpan: 3, height: 100 },
-        { id: 'classroom', label: 'Class', icon: 'school', gradient: ['#8B5CF6', '#7C3AED'], route: 'Classroom', colSpan: 3, height: 100 },
+        { id: 'classroom', label: 'Class', icon: 'school', gradient: ['#8B5CF6', '#7C3AED'], route: 'ClassroomList', colSpan: 3, height: 100 },
 
         // Row 4: System
         { id: 'feedback', label: 'Feedback', icon: 'comment-text-outline', gradient: ['#94A3B8', '#64748B'], route: 'StudentFeedback', colSpan: 6, height: 100 },
@@ -772,11 +772,11 @@ const getStyles = (isDark: boolean, width: number) => StyleSheet.create({
         alignItems: 'center',
         gap: 4,
         padding: 8,
-        backgroundColor: '#EEF2FF',
+        backgroundColor: isDark ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF',
         borderRadius: 12,
     },
     exploreBtnText: {
-        color: '#4F46E5',
+        color: '#6366F1', // Consistent indigo
         fontWeight: '700',
         fontSize: 13,
     },
@@ -788,8 +788,9 @@ const getStyles = (isDark: boolean, width: number) => StyleSheet.create({
         marginRight: 20,
     },
     simCardPremium: {
-        width: Platform.OS === 'web' && width > 768 ? 200 : 160,
-        backgroundColor: '#fff',
+        width: 200, // Fixed width for uniformity across all cards
+        minHeight: 220, // Ensure height uniformity
+        backgroundColor: isDark ? '#1E293B' : '#fff',
         borderRadius: 20,
         shadowColor: '#64748B',
         shadowOffset: { width: 0, height: 8 },
@@ -800,7 +801,7 @@ const getStyles = (isDark: boolean, width: number) => StyleSheet.create({
     },
     simPreviewPremium: {
         height: 120,
-        backgroundColor: '#e2e8f0',
+        backgroundColor: isDark ? '#334155' : '#e2e8f0',
         position: 'relative',
     },
     simImage: {
@@ -825,6 +826,8 @@ const getStyles = (isDark: boolean, width: number) => StyleSheet.create({
     simContentPremium: {
         padding: 16,
         paddingTop: 12,
+        flex: 1, // Fill remaining space
+        justifyContent: 'flex-start',
     },
     simBadge: {
         alignSelf: 'flex-start',
@@ -836,7 +839,7 @@ const getStyles = (isDark: boolean, width: number) => StyleSheet.create({
     simTitlePremium: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#1E293B',
+        color: isDark ? '#F1F5F9' : '#1E293B',
         lineHeight: 20,
     },
     simSubject: {

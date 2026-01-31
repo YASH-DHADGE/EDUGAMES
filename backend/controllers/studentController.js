@@ -194,6 +194,74 @@ const submitQuizResult = async (req, res) => {
 // @desc    Get all classroom content (chapters & quizzes) for the student's class
 // @route   GET /api/student/classroom
 // @access  Private/Student
+// @desc    Get list of available "Classrooms" (Subjects) for the student
+// @route   GET /api/student/classrooms-list
+// @access  Private/Student
+const getClassroomsList = async (req, res) => {
+    try {
+        const student = await User.findById(req.user._id).populate('selectedClass');
+        if (!student || !student.selectedClass) {
+            return res.status(400).json({ message: 'Student class not found' });
+        }
+
+        const classNumber = String(student.selectedClass);
+        const TeacherChapter = require('../models/TeacherChapter');
+        const TeacherQuiz = require('../models/TeacherQuiz');
+
+        // Find all unique subjects/teachers for this class
+        const chapters = await TeacherChapter.find({ classNumber }).populate('teacherId', 'name avatar');
+        const quizzes = await TeacherQuiz.find({ classNumber }).populate('teacherId', 'name avatar');
+
+        const classroomMap = new Map();
+
+        // 1. Fetch explicitly joined classrooms
+        const Classroom = require('../models/Classroom');
+        const joinedClassrooms = await Classroom.find({ students: req.user._id });
+
+        joinedClassrooms.forEach(c => {
+            classroomMap.set(c._id.toString(), {
+                id: c._id,
+                startColor: c.gradient ? c.gradient[0] : '#6366F1', // Use actual gradient
+                gradient: c.gradient,
+                subject: c.subject,
+                className: c.title || `Class ${c.classNumber}`,
+                teacher: 'Class Teacher', // could populate teacherId
+                teacherAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(c.subject)}&background=random`,
+                itemCount: 0, // dynamic?
+                isJoined: true,
+                code: c.code
+            });
+        });
+
+        const processItem = (item) => {
+            const key = item.subject; // Grouping by Subject primarily
+            if (!classroomMap.has(key)) {
+                classroomMap.set(key, {
+                    id: key, // Subject as ID effectively
+                    startColor: Math.floor(Math.random() * 16777215).toString(16), // Mock gradient/color
+                    subject: item.subject,
+                    className: `Class ${classNumber}`,
+                    teacher: item.teacherId ? item.teacherId.name : 'Class Teacher',
+                    teacherAvatar: item.teacherId?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.subject)}&background=random`,
+                    itemCount: 0
+                });
+            }
+            const room = classroomMap.get(key);
+            room.itemCount++;
+        };
+
+        chapters.forEach(processItem);
+        quizzes.forEach(processItem);
+
+        const classrooms = Array.from(classroomMap.values());
+        res.json(classrooms);
+
+    } catch (error) {
+        console.error('Error fetching classrooms list:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 // @desc    Get all classroom content (chapters & quizzes) for the student's class
 // @route   GET /api/student/classroom
 // @access  Private/Student
@@ -208,14 +276,19 @@ const getClassroomContent = async (req, res) => {
         }
 
         const classNumber = String(student.selectedClass);
+        const { subject } = req.query; // Support filtering
+
         const TeacherChapter = require('../models/TeacherChapter');
         const TeacherQuiz = require('../models/TeacherQuiz');
 
-        const chapters = await TeacherChapter.find({ classNumber })
+        let query = { classNumber };
+        if (subject) query.subject = subject;
+
+        const chapters = await TeacherChapter.find(query)
             .select('title subject content createdAt teacherId')
             .populate('teacherId', 'name avatar');
 
-        const quizzes = await TeacherQuiz.find({ classNumber })
+        const quizzes = await TeacherQuiz.find(query)
             .select('title subject description questions createdAt teacherId')
             .populate('teacherId', 'name avatar');
 
@@ -254,7 +327,17 @@ const getClassroomContent = async (req, res) => {
 
         const teachers = Array.from(uniqueTeacherMap.values());
 
-        // Combine and format content
+        // Create a map of assignment status for quick lookup
+        const assignmentStatusMap = new Map();
+        if (student.assignments) {
+            student.assignments.forEach(a => {
+                if (a.quizId) assignmentStatusMap.set(a.quizId.toString(), a.status);
+                if (a.chapterId) assignmentStatusMap.set(a.chapterId.toString(), a.status);
+                if (a.teacherChapterId) assignmentStatusMap.set(a.teacherChapterId.toString(), a.status);
+            });
+        }
+
+        // Combine and format content with Status
         const content = [
             ...chapters.map(c => ({
                 id: c._id,
@@ -265,7 +348,8 @@ const getClassroomContent = async (req, res) => {
                 fullContent: c.content,
                 teacher: c.teacherId ? c.teacherId.name : 'Unknown',
                 date: c.createdAt,
-                icon: 'book-open-page-variant'
+                icon: 'book-open-page-variant',
+                status: assignmentStatusMap.get(c._id.toString()) || 'pending' // Default to pending if in stream? Or 'new'?
             })),
             ...quizzes.map(q => ({
                 id: q._id,
@@ -276,7 +360,8 @@ const getClassroomContent = async (req, res) => {
                 teacher: q.teacherId ? q.teacherId.name : 'Unknown',
                 date: q.createdAt,
                 icon: 'format-list-checks',
-                questions: q.questions
+                questions: q.questions,
+                status: assignmentStatusMap.get(q._id.toString()) || 'pending'
             }))
         ];
 
@@ -285,7 +370,7 @@ const getClassroomContent = async (req, res) => {
 
         res.json({
             meta: {
-                className: `Class ${student.selectedClass}`,
+                className: subject || `Class ${student.selectedClass}`, // Use subject as title if filtered
                 schoolName: student.instituteId ? student.instituteId.name : 'Rural High School', // Fallback
                 teachers: teachers
             },
@@ -297,9 +382,43 @@ const getClassroomContent = async (req, res) => {
     }
 };
 
+// @desc    Join a classroom via code
+// @route   POST /api/student/join-classroom
+// @access  Private/Student
+const joinClassroom = async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) {
+            return res.status(400).json({ message: 'Please provide a class code' });
+        }
+
+        const Classroom = require('../models/Classroom');
+        const classroom = await Classroom.findOne({ code });
+
+        if (!classroom) {
+            return res.status(404).json({ message: 'Invalid class code' });
+        }
+
+        // Check if already joined
+        if (classroom.students.includes(req.user._id)) {
+            return res.status(400).json({ message: 'You are already in this classroom' });
+        }
+
+        classroom.students.push(req.user._id);
+        await classroom.save();
+
+        res.json({ message: 'Successfully joined classroom', classroom });
+    } catch (error) {
+        console.error('Error joining classroom:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     getStudentTasks,
     getQuizById,
     submitQuizResult,
-    getClassroomContent
+    getClassroomContent,
+    getClassroomsList,
+    joinClassroom
 };

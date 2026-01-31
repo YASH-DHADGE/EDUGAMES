@@ -278,6 +278,99 @@ const ThreeDModelScreen = () => {
         rotationRef.current = { x: 0, y: Math.PI / 2 };
     };
 
+    // Web-specific: Load Model URI
+    const [webModelUri, setWebModelUri] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (Platform.OS === 'web') {
+            const loadWebModel = async () => {
+                try {
+                    const modelName = model || 'Thorax and Abdomen';
+                    if (MODEL_REGISTRY[modelName]) {
+                        const asset = Asset.fromModule(MODEL_REGISTRY[modelName]);
+                        await asset.downloadAsync();
+                        setWebModelUri(asset.uri);
+                    }
+                } catch (e) {
+                    console.error("Failed to load web model", e);
+                }
+            };
+            loadWebModel();
+        }
+    }, [model]);
+
+    if (Platform.OS === 'web') {
+        const srcDoc = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { margin: 0; background-color: #f5f5f5; font-family: sans-serif; }
+                    model-viewer { width: 100vw; height: 100vh; }
+                    .loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; }
+                </style>
+                <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+            </head>
+            <body>
+                ${webModelUri ? `
+                <model-viewer
+                    src="${webModelUri}"
+                    camera-controls
+                    touch-action="pan-y"
+                    auto-rotate
+                    shadow-intensity="1"
+                    shadow-softness="0.5"
+                    exposure="1"
+                    camera-orbit="0deg 75deg 105%"
+                    min-camera-orbit="auto auto auto"
+                    max-camera-orbit="auto auto auto"
+                    style="background-color: transparent;"
+                >
+                    <div class="loading" slot="poster">Loading 3D Model...</div>
+                </model-viewer>
+                ` : '<div class="loading">Initializing Viewer...</div>'}
+            </body>
+            </html>
+        `;
+
+        return (
+            <View style={styles.container}>
+                {/* Modern Gradient Header (Matches Native) */}
+                <LinearGradient
+                    colors={['#667EEA', '#764BA2', '#5B4B8A']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.header]}
+                >
+                    <View style={[styles.decorativeCircle, { top: -40, right: -30, width: 120, height: 120 }]} />
+                    <View style={[styles.decorativeCircle, { bottom: -20, left: -20, width: 80, height: 80 }]} />
+
+                    <View style={[containerStyle, styles.headerContent, { paddingTop: 20 }]}>
+                        <TouchableOpacity
+                            onPress={() => navigation.goBack()}
+                            style={styles.backButton}
+                        >
+                            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <View style={styles.titleContainer}>
+                            <Text variant="headlineSmall" style={styles.title}>3D Model Viewer</Text>
+                            <Text style={styles.subtitle}>{model || 'Thorax and Abdomen'}</Text>
+                        </View>
+                        <View style={{ width: 48 }} />
+                    </View>
+                </LinearGradient>
+
+                <View style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+                    <iframe
+                        srcDoc={srcDoc}
+                        style={{ width: '100%', height: '100%', border: 'none' }}
+                        title="3D Model Viewer"
+                    />
+                </View>
+            </View>
+        );
+    }
+
     return (
         <View style={styles.container}>
             {/* Modern Gradient Header */}
@@ -468,14 +561,16 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
     },
     header: {
-        paddingBottom: spacing.xl,
+        paddingBottom: spacing.xxl, // Increased padding for better proportion
         paddingHorizontal: spacing.lg,
-        shadowColor: '#764BA2',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 12,
-        overflow: 'hidden',
+        borderBottomLeftRadius: 32, // Matches Home/ModelList
+        borderBottomRightRadius: 32, // Matches Home/ModelList
+        shadowColor: '#5B4B8A',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 20,
+        elevation: 10,
+        overflow: 'hidden', // Ensures gradient respects border radius
     },
     decorativeCircle: {
         position: 'absolute',

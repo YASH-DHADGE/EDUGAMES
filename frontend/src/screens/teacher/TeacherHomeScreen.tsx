@@ -70,9 +70,10 @@ const TeacherHomeScreen = () => {
             title: "CLASSROOM OPERATIONS",
             // Desktop Asymmetric Row: 5 + 3 + 4 = 12
             data: [
-                { id: '1', label: 'My Classroom', icon: 'google-classroom', screen: 'TeacherClassroom', gradient: ['#4F46E5', '#6366F1'], subtitle: 'Manage Classes', colSpan: 5 },
-                { id: '2', label: 'Roster', icon: 'account-group', screen: 'StudentList', gradient: ['#0EA5E9', '#38BDF8'], subtitle: 'View Profiles', colSpan: 3 },
-                { id: '3', label: 'Requests', icon: 'account-plus', screen: 'TeacherApprovals', gradient: ['#D97706', '#F59E0B'], subtitle: 'New Students', badge: stats.pendingApprovals, colSpan: 4, mobileFull: true },
+                { id: '1', label: 'My Classrooms', icon: 'google-classroom', screen: 'TeacherClassroomList', gradient: ['#4F46E5', '#6366F1'], subtitle: 'Manage Classes', colSpan: 4 },
+                { id: '1b', label: 'Preview', icon: 'eye', screen: 'TeacherClassroom', gradient: ['#8B5CF6', '#7C3AED'], subtitle: 'Content View', colSpan: 4 },
+                { id: '2', label: 'Roster', icon: 'account-group', screen: 'StudentList', gradient: ['#0EA5E9', '#38BDF8'], subtitle: 'View Profiles', colSpan: 4 },
+                { id: '3', label: 'Requests', icon: 'account-plus', screen: 'TeacherApprovals', gradient: ['#D97706', '#F59E0B'], subtitle: 'New Students', badge: stats.pendingApprovals, colSpan: 12, mobileFull: true },
             ]
         },
         {

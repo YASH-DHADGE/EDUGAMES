@@ -4,6 +4,7 @@ const Chapter = require('../models/Chapter');
 const TeacherChapter = require('../models/TeacherChapter');
 const Class = require('../models/Class');
 const Subject = require('../models/Subject');
+const Classroom = require('../models/Classroom');
 
 // @desc    Get teacher stats
 // @route   GET /api/teacher/stats
@@ -542,6 +543,168 @@ const updateStudent = async (req, res) => {
     }
 };
 
+// @desc    Create a new classroom
+// @route   POST /api/teacher/classroom
+// @access  Private/Teacher
+const createClassroom = async (req, res) => {
+    try {
+        const { title, subject, classNumber, section, room, gradient, autoEnroll } = req.body;
+
+        if (!title || !subject || !classNumber) {
+            return res.status(400).json({ message: 'Please provide title, subject, and class number' });
+        }
+
+        // Generate a 6-character unique code
+        let code;
+        let isUnique = false;
+        while (!isUnique) {
+            code = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existing = await Classroom.findOne({ code });
+            if (!existing) isUnique = true;
+        }
+
+        let initialStudents = [];
+        if (autoEnroll) {
+            const User = require('../models/User');
+            // Find students with matching class number
+            const students = await User.find({
+                role: 'student',
+                selectedClass: classNumber
+            }).select('_id');
+            initialStudents = students.map(s => s._id);
+        }
+
+        const classroom = await Classroom.create({
+            teacherId: req.user._id,
+            title,
+            subject,
+            classNumber,
+            section,
+            room,
+            code,
+            gradient: gradient || ['#6366F1', '#4F46E5'], // Default violet
+            students: initialStudents
+        });
+
+        res.status(201).json(classroom);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get all classrooms for the logged-in teacher
+// @route   GET /api/teacher/classrooms
+// @access  Private/Teacher
+// @desc    Get all classrooms for the logged-in teacher
+// @route   GET /api/teacher/classrooms
+// @access  Private/Teacher
+const getMyClassrooms = async (req, res) => {
+    try {
+        const classrooms = await Classroom.find({ teacherId: req.user._id })
+            .sort({ createdAt: -1 })
+            .populate('students', 'name email avatar'); // Populate basic student info
+        res.json(classrooms);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get single classroom with details
+// @route   GET /api/teacher/classroom/:id
+// @access  Private/Teacher
+const getClassroom = async (req, res) => {
+    try {
+        const classroom = await Classroom.findById(req.params.id)
+            .populate('students', 'name email avatar xp level'); // Get more student details
+
+        if (!classroom) {
+            return res.status(404).json({ message: 'Classroom not found' });
+        }
+
+        if (classroom.teacherId.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        res.json(classroom);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Delete a classroom
+// @route   DELETE /api/teacher/classroom/:id
+// @access  Private/Teacher
+const deleteClassroom = async (req, res) => {
+    try {
+        const classroom = await Classroom.findById(req.params.id);
+
+        if (!classroom) {
+            return res.status(404).json({ message: 'Classroom not found' });
+        }
+
+        if (classroom.teacherId.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        await classroom.deleteOne();
+        res.json({ message: 'Classroom removed' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Add a student to a classroom
+// @route   POST /api/teacher/classroom/add-student
+// @access  Private/Teacher
+const addStudentToClassroom = async (req, res) => {
+    try {
+        const { classroomId, studentEmail } = req.body;
+        const User = require('../models/User');
+
+        const classroom = await Classroom.findOne({ _id: classroomId, teacherId: req.user._id });
+        if (!classroom) {
+            return res.status(404).json({ message: 'Classroom not found' });
+        }
+
+        const student = await User.findOne({ email: studentEmail });
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found with this email' });
+        }
+
+        if (classroom.students.includes(student._id)) {
+            return res.status(400).json({ message: 'Student is already in this classroom' });
+        }
+
+        classroom.students.push(student._id);
+        await classroom.save();
+
+        res.json({ message: 'Student added successfully', student: { id: student._id, name: student.name, email: student.email } });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Remove a student from a classroom
+// @route   DELETE /api/teacher/classroom/:classroomId/student/:studentId
+// @access  Private/Teacher
+const removeStudentFromClassroom = async (req, res) => {
+    try {
+        const { classroomId, studentId } = req.params;
+
+        const classroom = await Classroom.findOne({ _id: classroomId, teacherId: req.user._id });
+        if (!classroom) {
+            return res.status(404).json({ message: 'Classroom not found' });
+        }
+
+        classroom.students = classroom.students.filter(id => id.toString() !== studentId);
+        await classroom.save();
+
+        res.json({ message: 'Student removed successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getTeacherStats,
     createQuiz,
@@ -558,5 +721,11 @@ module.exports = {
     getAllChapters,
     getStudentsByClass,
     deleteStudent,
-    updateStudent // New
+    updateStudent,
+    createClassroom,
+    getMyClassrooms,
+    deleteClassroom,
+    addStudentToClassroom,
+    removeStudentFromClassroom,
+    getClassroom
 };

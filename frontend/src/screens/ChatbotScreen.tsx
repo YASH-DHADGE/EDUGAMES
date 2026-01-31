@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,9 @@ import { searchOffline } from '../utils/offlineSearch';
 import { useAuth } from '../context/AuthContext';
 import { useAppTheme } from '../context/ThemeContext';
 import ScreenBackground from '../components/ScreenBackground';
+
+const { width } = Dimensions.get('window');
+const MAX_WIDTH = 800; // Max width for web
 
 interface Message {
     id: string;
@@ -135,8 +138,6 @@ const ChatbotScreen = () => {
         flatListRef.current?.scrollToEnd({ animated: true });
     }, [messages]);
 
-    // Starry background component removed in favor of ScreenBackground
-
     const renderMessage = ({ item }: { item: Message }) => {
         const isUser = item.sender === 'user';
         return (
@@ -164,35 +165,28 @@ const ChatbotScreen = () => {
         );
     };
 
-    return (
-        <ScreenBackground style={styles.container}>
-            <View style={styles.container}>
-                <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
+    const containerWidth = Platform.OS === 'web' && width > MAX_WIDTH ? MAX_WIDTH : width;
 
-                {/* Premium Header */}
-                <LinearGradient
-                    colors={['#6366F1', '#8B5CF6', '#A855F7']}
-                    style={[styles.header, { paddingTop: insets.top + 10 }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                >
-                    <View style={styles.headerContent}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <Ionicons name="arrow-back" size={24} color="#FFF" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>AI Tutor {isOffline ? '(Offline)' : ''}</Text>
-                        <TouchableOpacity style={styles.helpButton}>
-                            <Ionicons name="help-circle-outline" size={24} color="#FFF" />
-                        </TouchableOpacity>
-                    </View>
-                </LinearGradient>
+    return (
+        <ScreenBackground style={styles.wrapper}>
+            <View style={[styles.container, Platform.OS === 'web' && width > MAX_WIDTH && { width: containerWidth, alignSelf: 'center' }]}>
+                {/* Simple Header - No Gradient */}
+                <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color="#5f6368" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>AI Tutor {isOffline ? '(Offline)' : ''}</Text>
+                    <TouchableOpacity style={styles.helpButton}>
+                        <Ionicons name="help-circle-outline" size={24} color="#5f6368" />
+                    </TouchableOpacity>
+                </View>
 
                 <FlatList
                     ref={flatListRef}
                     data={messages}
                     keyExtractor={item => item.id}
                     renderItem={renderMessage}
-                    contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]} // Extra padding for input
+                    contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
                     style={styles.list}
                     showsVerticalScrollIndicator={false}
                 />
@@ -231,48 +225,41 @@ const ChatbotScreen = () => {
 };
 
 const styles = StyleSheet.create({
+    wrapper: {
+        flex: 1,
+        backgroundColor: '#F9FAFB',
+    },
     container: {
         flex: 1,
     },
     header: {
-        paddingBottom: 25,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        zIndex: 10,
-        elevation: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    headerContent: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#E5E7EB',
     },
     backButton: {
         padding: 8,
-        backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 20,
     },
     helpButton: {
         padding: 8,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#FFF',
-        textShadowColor: 'rgba(0,0,0,0.3)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#202124',
     },
     list: {
         flex: 1,
     },
     listContent: {
         padding: 20,
-        paddingTop: 30, // Space from header
+        paddingTop: 20,
     },
     messageContainer: {
         maxWidth: '85%',
@@ -287,7 +274,7 @@ const styles = StyleSheet.create({
     },
     userMessage: {
         alignSelf: 'flex-end',
-        backgroundColor: '#6366F1', // Primary Purple
+        backgroundColor: '#6366F1',
         borderBottomRightRadius: 4,
     },
     botMessage: {
