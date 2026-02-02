@@ -46,6 +46,7 @@ app.use('/api/videos', require('./routes/videoRoutes'));
 app.use('/api/wellbeing', require('./routes/wellbeingRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
 app.use('/api/live-classes', require('./routes/liveClassRoutes'));
+app.use('/api/notebook', require('./routes/notebookRoutes'));
 
 // Health check route
 app.get('/api/health', (req, res) => {
